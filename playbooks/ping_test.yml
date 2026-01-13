@@ -1,0 +1,13 @@
+---
+- name: Prueba de Conectividad Simple
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Verificar conectividad
+      ansible.builtin.ping:
+      
+    - name: Obtener información básica del sistema
+      ansible.builtin.debug:
+        msg: "Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }} | Hostname: {{ ansible_hostname }}"
+
+
