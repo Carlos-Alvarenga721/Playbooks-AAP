@@ -1,0 +1,45 @@
+---
+- name: Demo - Recopilar información básica de servidores
+  hosts: all
+  gather_facts: yes
+  become: yes
+  
+  tasks:
+    - name: Mostrar información del sistema operativo
+      debug:
+        msg: |
+          Hostname: {{ ansible_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Arquitectura: {{ ansible_architecture }}
+          Memoria Total: {{ ansible_memtotal_mb }} MB
+          CPUs: {{ ansible_processor_vcpus }}
+
+    - name: Verificar espacio en disco
+      command: df -h /
+      register: disk_space
+      changed_when: false
+
+    - name: Mostrar espacio en disco
+      debug:
+        var: disk_space.stdout_lines
+
+    - name: Verificar uptime
+      command: uptime
+      register: uptime_output
+      changed_when: false
+
+    - name: Mostrar uptime
+      debug:
+        var: uptime_output.stdout
+
+    - name: Crear archivo de prueba
+      file:
+        path: /tmp/ansible-demo-test.txt
+        state: touch
+        mode: '0644'
+
+    - name: Escribir información en el archivo
+      lineinfile:
+        path: /tmp/ansible-demo-test.txt
+        line: "Prueba demo ejecutada en {{ ansible_date_time.iso8601 }} por {{ ansible_user }}"
+        create: yes
