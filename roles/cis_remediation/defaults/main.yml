@@ -1,0 +1,67 @@
+---
+# =============================================================================
+# VARIABLES POR DEFECTO - CIS REMEDIATION ROLE
+# =============================================================================
+# Remediación automática de CIS Benchmark Level 1 para RHEL 9
+# =============================================================================
+
+# ⚠️ IMPORTANTE: Por seguridad, la remediación está DESACTIVADA por defecto
+# Cambiar a true solo después de revisar los controles a remediar
+apply_remediation: false
+
+# Nivel de CIS Benchmark
+cis_level: 1
+
+# Timestamp de la remediación
+remediation_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+# Crear backup antes de modificar archivos
+create_backup: true
+backup_dir: "/var/backup/cis_remediation"
+
+# =============================================================================
+# CONTROLES A REMEDIAR (Activar/Desactivar individualmente)
+# =============================================================================
+remediate_controls:
+  # Sección 1: Configuración Inicial
+  cis_1_1_1_1_cramfs: true           # Deshabilitar cramfs
+  cis_1_4_1_bootloader_password: false # ⚠️ Requiere intervención manual
+  cis_1_5_1_motd_permissions: true    # Corregir permisos /etc/motd
+  
+  # Sección 3: Configuración de Red
+  cis_3_4_1_1_firewalld: true         # Instalar y activar firewalld
+  
+  # Sección 4: Logging y Auditoría
+  cis_4_2_1_1_rsyslog: true           # Instalar y activar rsyslog
+  
+  # Sección 5: Acceso y Autenticación
+  cis_5_2_1_sshd_permissions: true    # Corregir permisos sshd_config
+  cis_5_2_4_ssh_root_login: true      # Deshabilitar SSH root login
+  cis_5_2_11_ssh_max_auth_tries: true # Configurar MaxAuthTries
+  cis_5_4_1_1_password_expiry: true   # Configurar política de contraseñas
+  
+  # Sección 6: Mantenimiento del Sistema
+  cis_6_1_1_system_file_integrity: true # Instalar AIDE
+
+# =============================================================================
+# VALORES A APLICAR EN REMEDIACIÓN
+# =============================================================================
+remediation_values:
+  ssh_max_auth_tries: 4
+  ssh_permit_root_login: "no"
+  password_max_days: 365
+  password_min_days: 1
+  password_warn_age: 7
+  sshd_config_mode: "0600"
+  motd_mode: "0644"
+
+# =============================================================================
+# MENSAJE MOTD CORPORATIVO
+# =============================================================================
+corporate_motd: |
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║                    ACCESO RESTRINGIDO                            ║
+  ║  Este sistema es propiedad de la organización.                   ║
+  ║  El acceso no autorizado está prohibido.                         ║
+  ║  Todas las actividades son monitoreadas y registradas.           ║
+  ╚══════════════════════════════════════════════════════════════════╝

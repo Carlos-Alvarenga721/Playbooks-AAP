@@ -1,0 +1,81 @@
+---
+# =============================================================================
+# INVENTARIO DE SERVIDORES GCP - POC Ansible Automation Platform
+# =============================================================================
+# Proyecto: Automatización de Cumplimiento y Seguridad CIS
+# Infraestructura: Google Cloud Platform (GCE)
+# =============================================================================
+
+all:
+  children:
+    # =========================================================================
+    # INFRAESTRUCTURA CORE DE AAP
+    # =========================================================================
+    aap_infrastructure:
+      hosts:
+        aap-controller:
+          ansible_host: 10.128.0.2
+          description: "Ansible Automation Platform Controller"
+        postgresql:
+          ansible_host: 10.128.0.5
+          description: "Base de datos PostgreSQL para AAP"
+      vars:
+        ansible_user: ansible_admin
+        ansible_become: true
+        ansible_become_method: sudo
+
+    # =========================================================================
+    # SERVIDORES LINUX TARGET (Objetivos de Auditoría CIS)
+    # =========================================================================
+    linux_servers:
+      hosts:
+        web-server:
+          ansible_host: 10.128.0.6
+          server_role: web
+          description: "Servidor Web Linux"
+        app-server:
+          ansible_host: 10.128.0.7
+          server_role: application
+          description: "Servidor de Aplicaciones Linux"
+        db-server:
+          ansible_host: 10.128.0.8
+          server_role: database
+          description: "Servidor de Base de Datos Linux"
+      vars:
+        ansible_user: ansible_admin
+        ansible_become: true
+        ansible_become_method: sudo
+        ansible_python_interpreter: /usr/bin/python3
+        # Variables para auditoría CIS
+        cis_level: 1
+        apply_remediation: false
+
+    # =========================================================================
+    # SERVIDORES WINDOWS TARGET
+    # =========================================================================
+    windows_servers:
+      hosts:
+        win-dc:
+          ansible_host: 10.128.0.4
+          server_role: domain_controller
+          description: "Windows Domain Controller - Active Directory"
+      vars:
+        ansible_user: ansible_admin
+        ansible_connection: winrm
+        ansible_winrm_transport: ntlm
+        ansible_winrm_server_cert_validation: ignore
+        ansible_port: 5986
+
+    # =========================================================================
+    # GRUPOS COMBINADOS PARA WORKFLOWS
+    # =========================================================================
+    # Todos los servidores que serán auditados con CIS Benchmark
+    cis_audit_targets:
+      children:
+        linux_servers:
+        windows_servers:
+
+    # Solo servidores de aplicación (Web, App, DB)
+    application_servers:
+      children:
+        linux_servers:

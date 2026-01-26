@@ -1,0 +1,191 @@
+---
+# =============================================================================
+# PLAYBOOK MAESTRO: CIS COMPLIANCE WORKFLOW
+# =============================================================================
+# Orquesta el flujo completo: Auditoría → Remediación → Re-Auditoría → Reporte
+# Diseñado para ser ejecutado desde AAP Controller con Surveys
+# =============================================================================
+# USO DESDE TERMINAL:
+#   # Solo auditoría + reporte:
+#   ansible-playbook playbooks/cis_compliance_workflow.yml -i inventories/gcp_hosts.yml
+#
+#   # Auditoría + Remediación + Reporte:
+#   ansible-playbook playbooks/cis_compliance_workflow.yml -i inventories/gcp_hosts.yml \
+#     -e "apply_remediation=true" -e "email_enabled=true"
+#
+# VARIABLES PARA SURVEY EN AAP:
+#   - target_servers: Servidores a auditar (default: linux_servers)
+#   - apply_remediation: Aplicar correcciones (true/false)
+#   - email_enabled: Enviar reporte por email (true/false)
+#   - email_recipients: Lista de destinatarios
+# =============================================================================
+
+- name: "FASE 1: Auditoría Inicial CIS Benchmark"
+  hosts: "{{ target_servers | default('linux_servers') }}"
+  gather_facts: yes
+  become: yes
+  
+  pre_tasks:
+    - name: Registrar inicio del workflow
+      ansible.builtin.set_fact:
+        workflow_start_time: "{{ ansible_date_time.iso8601 }}"
+        workflow_id: "WF-{{ ansible_date_time.epoch }}"
+
+    - name: Mostrar banner de inicio
+      ansible.builtin.debug:
+        msg: |
+          
+          ╔══════════════════════════════════════════════════════════════════════╗
+          ║         🔒 CIS COMPLIANCE WORKFLOW - ANSIBLE AUTOMATION PLATFORM     ║
+          ╠══════════════════════════════════════════════════════════════════════╣
+          ║  Workflow ID: {{ workflow_id }}
+          ║  Fecha/Hora: {{ workflow_start_time }}
+          ║  Servidores Target: {{ target_servers | default('linux_servers') }}
+          ║  Remediación: {{ 'HABILITADA ⚠️' if apply_remediation | default(false) else 'DESHABILITADA' }}
+          ║  Notificación Email: {{ 'HABILITADA' if email_enabled | default(false) else 'DESHABILITADA' }}
+          ╚══════════════════════════════════════════════════════════════════════╝
+
+  roles:
+    - role: cis_audit
+
+  post_tasks:
+    - name: Guardar resultados de auditoría inicial
+      ansible.builtin.set_fact:
+        initial_audit_results: "{{ cis_audit_results }}"
+        initial_audit_summary: "{{ audit_summary }}"
+        pre_remediation_compliance: "{{ audit_summary.compliance_percentage }}"
+
+    - name: Mostrar resumen de auditoría inicial
+      ansible.builtin.debug:
+        msg: |
+          
+          ┌──────────────────────────────────────────────────────────────┐
+          │  📊 FASE 1 COMPLETADA: Auditoría Inicial                    │
+          ├──────────────────────────────────────────────────────────────┤
+          │  Servidor: {{ inventory_hostname }}
+          │  Cumplimiento: {{ audit_summary.compliance_percentage }}%
+          │  Controles OK: {{ audit_summary.passed }} / {{ audit_summary.total_controls }}
+          │  Controles FAIL: {{ audit_summary.failed }}
+          └──────────────────────────────────────────────────────────────┘
+
+# =============================================================================
+# FASE 2: REMEDIACIÓN (Solo si está habilitada)
+# =============================================================================
+- name: "FASE 2: Remediación Automática CIS"
+  hosts: "{{ target_servers | default('linux_servers') }}"
+  gather_facts: yes
+  become: yes
+  
+  pre_tasks:
+    - name: Verificar si se requiere remediación
+      ansible.builtin.debug:
+        msg: |
+          
+          ┌──────────────────────────────────────────────────────────────┐
+          │  🔧 FASE 2: Remediación Automática                          │
+          ├──────────────────────────────────────────────────────────────┤
+          {% if apply_remediation | default(false) %}
+          │  Estado: EJECUTANDO REMEDIACIONES...                        │
+          {% else %}
+          │  Estado: OMITIDA (apply_remediation=false)                  │
+          {% endif %}
+          └──────────────────────────────────────────────────────────────┘
+      when: true
+
+  roles:
+    - role: cis_remediation
+      when: apply_remediation | default(false)
+
+  post_tasks:
+    - name: Guardar resultados de remediación
+      ansible.builtin.set_fact:
+        remediation_completed: "{{ apply_remediation | default(false) }}"
+        remediation_count: "{{ remediation_results | default([]) | length }}"
+      when: apply_remediation | default(false)
+
+# =============================================================================
+# FASE 3: RE-AUDITORÍA (Solo si hubo remediación)
+# =============================================================================
+- name: "FASE 3: Re-Auditoría Post-Remediación"
+  hosts: "{{ target_servers | default('linux_servers') }}"
+  gather_facts: yes
+  become: yes
+  
+  pre_tasks:
+    - name: Mostrar inicio de re-auditoría
+      ansible.builtin.debug:
+        msg: |
+          
+          ┌──────────────────────────────────────────────────────────────┐
+          │  🔄 FASE 3: Re-Auditoría Post-Remediación                   │
+          └──────────────────────────────────────────────────────────────┘
+      when: apply_remediation | default(false)
+
+  roles:
+    - role: cis_audit
+      when: apply_remediation | default(false)
+
+  post_tasks:
+    - name: Guardar resultados de re-auditoría
+      ansible.builtin.set_fact:
+        post_remediation_compliance: "{{ audit_summary.compliance_percentage }}"
+        final_audit_results: "{{ cis_audit_results }}"
+        final_audit_summary: "{{ audit_summary }}"
+      when: apply_remediation | default(false)
+
+    - name: Establecer resultados finales (sin remediación)
+      ansible.builtin.set_fact:
+        post_remediation_compliance: "{{ pre_remediation_compliance }}"
+        final_audit_results: "{{ initial_audit_results }}"
+        final_audit_summary: "{{ initial_audit_summary }}"
+      when: not apply_remediation | default(false)
+
+# =============================================================================
+# FASE 4: GENERACIÓN DE REPORTE Y NOTIFICACIÓN
+# =============================================================================
+- name: "FASE 4: Generación de Reporte y Notificación"
+  hosts: "{{ target_servers | default('linux_servers') }}"
+  gather_facts: yes
+  become: yes
+
+  pre_tasks:
+    - name: Preparar datos del reporte con comparativa
+      ansible.builtin.set_fact:
+        remediation_applied: "{{ apply_remediation | default(false) }}"
+        pre_compliance: "{{ pre_remediation_compliance }}"
+        post_compliance: "{{ post_remediation_compliance }}"
+        remediated_count: "{{ remediation_count | default(0) }}"
+        cis_audit_results: "{{ final_audit_results }}"
+        audit_summary: "{{ final_audit_summary }}"
+
+  roles:
+    - role: cis_reporting
+
+  post_tasks:
+    - name: Mostrar resumen final del workflow
+      ansible.builtin.debug:
+        msg: |
+          
+          ╔══════════════════════════════════════════════════════════════════════╗
+          ║              ✅ WORKFLOW COMPLETADO EXITOSAMENTE                     ║
+          ╠══════════════════════════════════════════════════════════════════════╣
+          ║  🖥️  Servidor: {{ inventory_hostname }}
+          ║  🆔 Workflow ID: {{ workflow_id }}
+          ╠══════════════════════════════════════════════════════════════════════╣
+          ║  📊 RESULTADOS:                                                      ║
+          ║  ────────────────────────────────────────────────────────────────    ║
+          ║  Cumplimiento Inicial: {{ pre_remediation_compliance }}%
+          {% if apply_remediation | default(false) %}
+          ║  Controles Remediados: {{ remediated_count }}
+          ║  Cumplimiento Final: {{ post_remediation_compliance }}%
+          ║  Mejora: +{{ (post_remediation_compliance | float - pre_remediation_compliance | float) | round(1) }}%
+          {% else %}
+          ║  Remediación: No aplicada
+          ║  Cumplimiento Actual: {{ post_remediation_compliance }}%
+          {% endif %}
+          ╠══════════════════════════════════════════════════════════════════════╣
+          ║  📄 Reporte guardado en: {{ report_config.output_dir }}
+          {% if email_enabled | default(false) %}
+          ║  📧 Email enviado a: {{ email_config.to_addresses | join(', ') }}
+          {% endif %}
+          ╚══════════════════════════════════════════════════════════════════════╝

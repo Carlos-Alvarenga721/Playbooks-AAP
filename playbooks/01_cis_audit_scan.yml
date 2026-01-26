@@ -1,13 +1,48 @@
 ---
-- name: Prueba de Conectividad Simple
-  hosts: all
+# =============================================================================
+# PLAYBOOK: CIS AUDIT SCAN
+# =============================================================================
+# Ejecuta auditoría de CIS Benchmark Level 1 en servidores Linux
+# Genera resultados detallados por cada control verificado
+# =============================================================================
+# USO:
+#   ansible-playbook playbooks/01_cis_audit_scan.yml -i inventories/gcp_hosts.yml
+#
+# VARIABLES OPCIONALES:
+#   -e "cis_level=1"           → Nivel de CIS Benchmark (1 o 2)
+#   -e "apply_remediation=false" → No aplica correcciones (solo audita)
+# =============================================================================
+
+- name: CIS Benchmark Level 1 - Auditoría de Seguridad
+  hosts: linux_servers
   gather_facts: yes
-  tasks:
-    - name: Verificar conectividad
-      ansible.builtin.ping:
-      
-    - name: Obtener información básica del sistema
+  become: yes
+
+  pre_tasks:
+    - name: Mostrar información del servidor objetivo
       ansible.builtin.debug:
-        msg: "Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }} | Hostname: {{ ansible_hostname }}"
+        msg: |
+          ══════════════════════════════════════════════════════════════
+          INICIANDO AUDITORÍA CIS BENCHMARK
+          ══════════════════════════════════════════════════════════════
+          🖥️  Servidor: {{ inventory_hostname }}
+          🌐 IP: {{ ansible_host }}
+          🐧 Sistema Operativo: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          📅 Fecha de Escaneo: {{ ansible_date_time.iso8601 }}
+          🔒 Nivel CIS: {{ cis_level | default(1) }}
+          ══════════════════════════════════════════════════════════════
 
+  roles:
+    - role: cis_audit
 
+  post_tasks:
+    - name: Guardar resultados en variable global
+      ansible.builtin.set_fact:
+        server_audit_results:
+          hostname: "{{ inventory_hostname }}"
+          ip: "{{ ansible_host }}"
+          os: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+          results: "{{ cis_audit_results }}"
+          summary: "{{ audit_summary }}"
+      delegate_to: localhost
+      run_once: false

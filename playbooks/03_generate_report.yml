@@ -1,13 +1,57 @@
 ---
-- name: Prueba de Conectividad Simple
-  hosts: all
+# =============================================================================
+# PLAYBOOK: GENERATE CIS COMPLIANCE REPORT
+# =============================================================================
+# Ejecuta auditoría CIS y genera reporte HTML con envío por email
+# =============================================================================
+# USO:
+#   # Generar reporte sin enviar email:
+#   ansible-playbook playbooks/03_generate_report.yml -i inventories/gcp_hosts.yml
+#
+#   # Generar y enviar por email:
+#   ansible-playbook playbooks/03_generate_report.yml -i inventories/gcp_hosts.yml -e "email_enabled=true"
+#
+#   # Para servidor específico:
+#   ansible-playbook playbooks/03_generate_report.yml -i inventories/gcp_hosts.yml --limit web-server
+# =============================================================================
+
+- name: CIS Compliance Report - Auditoría y Generación de Reporte
+  hosts: linux_servers
   gather_facts: yes
-  tasks:
-    - name: Verificar conectividad
-      ansible.builtin.ping:
-      
-    - name: Obtener información básica del sistema
+  become: yes
+
+  pre_tasks:
+    - name: Mostrar inicio de proceso
       ansible.builtin.debug:
-        msg: "Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }} | Hostname: {{ ansible_hostname }}"
+        msg: |
+          ══════════════════════════════════════════════════════════════
+          📊 GENERACIÓN DE REPORTE DE CUMPLIMIENTO CIS
+          ══════════════════════════════════════════════════════════════
+          🖥️  Servidor: {{ inventory_hostname }}
+          🌐 IP: {{ ansible_host }}
+          🐧 Sistema Operativo: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          📅 Fecha: {{ ansible_date_time.iso8601 }}
+          📧 Envío Email: {{ 'Habilitado' if email_enabled | default(false) else 'Deshabilitado' }}
+          ══════════════════════════════════════════════════════════════
 
+  roles:
+    # Primero ejecuta la auditoría
+    - role: cis_audit
+    
+    # Luego genera el reporte
+    - role: cis_reporting
 
+  post_tasks:
+    - name: Resumen final del proceso
+      ansible.builtin.debug:
+        msg: |
+          
+          ══════════════════════════════════════════════════════════════
+          ✅ PROCESO COMPLETADO
+          ══════════════════════════════════════════════════════════════
+          🖥️  Servidor: {{ inventory_hostname }}
+          📊 Cumplimiento: {{ audit_summary.compliance_percentage }}%
+          ✅ Controles OK: {{ audit_summary.passed }}
+          ❌ Controles FAIL: {{ audit_summary.failed }}
+          📄 Reporte guardado en: {{ report_config.output_dir }}
+          ══════════════════════════════════════════════════════════════

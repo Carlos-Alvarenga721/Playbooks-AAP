@@ -1,0 +1,274 @@
+# RESUMEN EJECUTIVO - PRUEBA DE CONCEPTO
+## Ansible Automation Platform sobre Google Cloud Platform
+
+---
+
+## DESCRIPCIÓN GENERAL DEL PROYECTO
+
+Este documento define una Prueba de Concepto (POC) para demostrar la viabilidad técnica de Red Hat Ansible Automation Platform (AAP) desplegada completamente sobre la infraestructura de Google Cloud Platform (GCP). La solución funciona como un motor de orquestación centralizado para gestionar recursos en la nube, integrando un portal web de autoservicio que consume las API de AAP para automatizar la administración de servidores Windows y Linux.
+
+---
+
+## ENUNCIADO DEL PROYECTO
+
+Diseñar e implementar una solución de automatización basada en Ansible Automation Platform sobre una arquitectura optimizada de servidores en GCP, con el objetivo de centralizar y orquestar procesos operativos de TI de manera segura y eficiente.
+
+La plataforma permitirá la ejecución de tareas mediante un portal corporativo self-service conectado a la API de AAP, facilitando que equipos técnicos o administrativos realicen automatizaciones de forma simple y evidenciable sobre casos de uso reales.
+
+**Funcionalidades principales:**
+- Creación de componentes de red y cómputo
+- Aplicación de políticas de hardening de seguridad
+- Auditoría continua de cumplimiento normativo
+- Generación y envío automático de reportes por correo electrónico
+
+---
+
+## OBJETIVOS
+
+### Objetivo General
+Establecer un centro de automatización y orquestación integral mediante el despliegue de Red Hat Ansible Automation Platform en Google Cloud Platform, centralizando las operaciones de TI a través de un portal self-service que reduzca significativamente los tiempos de ejecución manual y garantice la estandarización y seguridad de la infraestructura.
+
+### Objetivos Específicos
+
+**1. Diseñar y desplegar una arquitectura multinodo de AAP en GCP**
+- Implementar infraestructura optimizada con nodo de control híbrido y bases de datos dedicadas
+- Integrar instancias Windows y servidores Linux para gestión unificada multiplataforma
+
+**2. Desarrollar un portal de autoservicio basado en API**
+- Construir interfaz web que consuma las API de Ansible Automation Platform
+- Orquestar flujos de trabajo de gestión de empleados y aprovisionamiento de recursos
+- Reducir tiempos de respuesta de horas a minutos
+- Incluir módulo de notificaciones automatizadas vía correo electrónico
+- Documentar estado antes/después y todas las actividades realizadas
+
+**3. Automatizar el cumplimiento normativo y la seguridad**
+- Implementar protocolos de escaneo y remediación automatizada
+- Aplicar estándares CIS Benchmark Level 1
+- Garantizar cumplimiento continuo de políticas de hardening y seguridad corporativa
+
+---
+
+## CONTEXTO Y PROBLEMÁTICA ACTUAL
+
+### Situación Actual
+La gestión operativa del cliente depende de procesos manuales para tareas críticas:
+- Alta y baja de colaboradores en entornos mixtos Windows y Linux
+- Ejecución de auditorías de seguridad
+- Aprovisionamiento de entornos temporales
+
+**Consecuencias:**
+- Tiempos de respuesta de 2 a 3 horas por tarea
+- Mayor riesgo de errores de configuración
+- Potenciales brechas de seguridad
+
+### Solución Propuesta
+Transformar la operativa mediante un modelo de "Automatización como Servicio":
+- Infraestructura robusta en Google Cloud Platform
+- Control y ejecución centralizados de flujos de trabajo
+- Portal de autoservicio con interfaz web sencilla
+- Traducción automática de solicitudes de negocio a acciones técnicas vía API
+
+**Sistema de Reportes Automatizado:**
+Cada flujo de trabajo generará reportes detallados enviados por correo electrónico que incluyen:
+- Estado inicial del servidor
+- Lista de actividades ejecutadas
+- Resultados de escaneos de seguridad
+- Cumplimiento de políticas CIS Benchmark
+- Estado final post-automatización
+
+---
+
+## COMPONENTES TECNOLÓGICOS
+
+### Herramientas Principales
+
+**1. Ansible Automation Platform (AAP)**
+- Motor central para orquestar y automatizar secuencias de administración
+- Gestión de servidores en GCP
+
+**2. Google Compute Engine (GCE)**
+- Despliegue de arquitectura completa
+- Controlador híbrido de AAP
+- Bases de datos
+- Servidores de aplicaciones
+
+**3. Portal Self-Service**
+- Interfaz personalizada que consume API de Ansible Controller
+- Permite a usuarios no técnicos lanzar playbooks y flujos de trabajo complejos
+
+**4. Identity & Access Manager (IAM) y Firewall Rules de GCP**
+- Acceso restringido a la plataforma
+- Canales de comunicación seguros entre nodo de gestión y objetivos de automatización
+
+---
+
+## FASES DE INTEGRACIÓN
+
+### FASE 1: Despliegue de Infraestructura Core y Red en GCP
+
+**Arquitectura de Control:**
+- Servidor para AAP Controller (RHEL 9) que gestiona interfaz, API y motor de workflows
+- Instancia dedicada PostgreSQL para almacenamiento de inventarios y credenciales
+- Desacoplamiento y escalabilidad del procesamiento de playbooks
+
+**Configuración de Red y Seguridad:**
+- Reglas de firewall en VPC de GCP para tráfico necesario
+- Cuentas de servicio en IAM para administración de recursos Google Cloud vía API nativas
+
+### FASE 2: Configuración de Lógica y Conectividad de Destinos
+
+**Objetivos de Automatización:**
+- Windows Domain Controller para gestión de Active Directory
+- Servidores Linux (Web, App y DB) como targets para configuración y auditoría
+
+**Desarrollo de Automatización:**
+- Playbooks modulares en YAML
+- Plantillas de Trabajo en el Controller
+- Exposición de puntos finales de API para portal de autoservicio
+- Parámetros específicos ingresados por el usuario
+
+### FASE 3: Ejecución de Casos de Uso y Validación
+
+**Casos de Uso Implementados:**
+
+1. **Gestión de Empleados**
+   - Impacto simultáneo en Windows y Linux
+   - Flujos de trabajo totalmente autónomos
+
+2. **Escaneos de Cumplimiento**
+   - Norma CIS Benchmark Level 1
+   - Remediación de vulnerabilidades en tiempo real
+
+3. **Aprovisionamiento de Entornos de Ventas**
+   - Creación de instancias estandarizadas en GCP
+   - Notificación automática por email de disponibilidad
+   - Instancias efímeras con destrucción automática post-uso
+   - Optimización de costos de nube
+
+**Sistema de Reportes:**
+Al completar cada automatización, se generan y envían reportes detallados que incluyen:
+- Comparativa antes/después
+- Actividades ejecutadas
+- Resultados de auditorías
+- Evidencias de cumplimiento
+
+---
+
+## ARQUITECTURA DE LA SOLUCIÓN
+
+### Modelo de Gestión Centralizada
+AAP actúa como núcleo de orquestación integrando recursos de cómputo Windows y Linux bajo red virtual segura. Portal web externo consume servicios de automatización vía API.
+
+### Componentes Principales
+
+**1. Ansible Automation Platform Controller**
+- Servidor central con inteligencia de la plataforma
+- Interfaz web
+- Motor de flujos de trabajo
+- API REST
+
+**2. PostgreSQL para AAP**
+- Base de datos dedicada
+- Almacenamiento de inventarios y credenciales
+- Historial de ejecuciones
+
+**3. Portal Self-Service**
+- Interfaz web sencilla
+- Interacción con API de AAP
+- Disparo de tareas automatizadas
+
+**4. Infraestructura Target**
+- Servidores Windows (Active Directory)
+- Servidores Linux (Web, App, DB)
+- Administrados por plataforma AAP
+
+---
+
+## CRONOGRAMA DEL PROYECTO
+
+### FASE 1: Planeación y Diseño de la Arquitectura
+**Duración:** 6 días calendario (12-17 de enero)
+
+**Actividades:**
+- Definición de Requisitos y Diseño del Blueprint
+- Reunión con interesados para definir flujos lógicos
+- Especificaciones de servidores de aplicaciones
+- Arquitectura de Red y Seguridad en GCP
+- Diseño de VPC, subredes y reglas de firewall
+- Planificación del Portal y API
+- Definición de parámetros de entrada para Surveys
+
+### FASE 2: Despliegue de Infraestructura de Control y Targets en GCP
+**Duración:** 10 días calendario (18-27 de enero)
+
+**Actividades:**
+- Aprovisionamiento del Ecosistema AAP
+- Instalación del Controller (RHEL 9)
+- Base de datos PostgreSQL en instancias optimizadas GCP
+- Despliegue de Servidores Destino (Targets)
+- Instancias Windows Domain Controller
+- Servidores Linux (Web, App y DB)
+- Gestión de Credenciales y Accesos
+- Cuentas de servicio en GCP
+- Integración de secretos y llaves SSH en Ansible Vault
+- Configuración del Inventario Dinámico
+- Descubrimiento automático de recursos en Google Cloud
+
+### FASE 3: Desarrollo de Workflows, Integración API y Validación
+**Duración:** 14 días calendario (28 enero - 10 febrero)
+
+**Actividades:**
+- Desarrollo de Playbooks Atómicos e IaC
+- Scripts para gestión de usuarios
+- Configuración de red
+- Despliegue de aplicaciones
+- Orquestación de Workflows Complejos
+- Construcción de lógica encadenada para casos de uso
+- Integración con Portal Self-Service
+- Habilitación de plantillas de trabajo
+- Vinculación de API de AAP con interfaz web
+- Ejecución Piloto y Hardening
+- Escaneos de cumplimiento CIS Benchmark Level 1
+- Pruebas de idempotencia para consistencia y seguridad
+
+---
+
+## ALCANCES DEL PROYECTO
+
+El alcance comprende diseño, configuración y puesta en marcha de plataforma de automatización capaz de gestionar el ciclo de vida de recursos y seguridad con el proveedor GCP.
+
+### Elementos de Valor
+
+**1. Reducción de Tiempos**
+- Transformación de procesos manuales de 2-3 horas
+- A tareas automáticas de 3-5 minutos
+
+**2. Estandarización y Seguridad**
+- Garantía de cumplimiento de políticas de hardening
+- Auditorías internacionales de forma nativa en cada servidor
+
+**3. Optimización de Costos**
+- Gestión eficiente de recursos efímeros
+- Flujos de destrucción automática de entornos inactivos
+
+---
+
+## ENTREGABLES DEL PROYECTO
+
+1. Documento de diseño y planificación
+2. Infraestructura de automatización operativa
+3. Lógica de automatización
+4. Portal de autoservicio
+5. Manuales de usuario y técnico
+
+---
+
+## DETALLES TÉCNICOS DE SERVIDORES EN GCP
+
+La arquitectura contempla la siguiente infraestructura de servidores optimizados en Google Compute Engine para soportar todos los componentes de la solución de automatización.
+
+---
+
+**DOCUMENTO GENERADO PARA PRUEBA DE CONCEPTO**
+**Ansible Automation Platform en Google Cloud Platform**
+**Enero 2026**

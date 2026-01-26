@@ -1,0 +1,52 @@
+---
+# =============================================================================
+# VARIABLES POR DEFECTO - CIS AUDIT ROLE
+# =============================================================================
+# CIS Benchmark Level 1 para RHEL 9
+# =============================================================================
+
+# Nivel de CIS Benchmark a auditar (1 o 2)
+cis_level: 1
+
+# Timestamp del escaneo
+scan_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+# Directorio donde se guardarán los reportes locales
+audit_reports_dir: "/tmp/cis_audit_reports"
+
+# =============================================================================
+# CONTROLES CIS A AUDITAR
+# =============================================================================
+# Puedes deshabilitar controles específicos cambiando a false
+
+cis_controls:
+  # Sección 1: Configuración Inicial
+  cis_1_1_1_1_cramfs: true           # Verificar cramfs deshabilitado
+  cis_1_4_1_bootloader_password: true # Verificar password en bootloader
+  cis_1_5_1_motd_permissions: true    # Verificar permisos /etc/motd
+  
+  # Sección 3: Configuración de Red
+  cis_3_4_1_1_firewalld: true         # Verificar firewalld instalado
+  
+  # Sección 4: Logging y Auditoría
+  cis_4_2_1_1_rsyslog: true           # Verificar rsyslog instalado
+  
+  # Sección 5: Acceso y Autenticación
+  cis_5_2_1_sshd_permissions: true    # Verificar permisos sshd_config
+  cis_5_2_4_ssh_root_login: true      # SSH root login deshabilitado
+  cis_5_2_11_ssh_max_auth_tries: true # SSH MaxAuthTries configurado
+  cis_5_4_1_1_password_expiry: true   # Política expiración contraseñas
+  
+  # Sección 6: Mantenimiento del Sistema
+  cis_6_1_1_system_file_integrity: true # Integridad archivos sistema
+
+# =============================================================================
+# VALORES ESPERADOS (CIS Benchmark Level 1)
+# =============================================================================
+cis_expected_values:
+  ssh_max_auth_tries: 4
+  ssh_permit_root_login: "no"
+  password_max_days: 365
+  password_min_days: 1
+  password_warn_age: 7
+  sshd_config_mode: "0600"

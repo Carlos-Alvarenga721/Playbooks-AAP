@@ -1,0 +1,217 @@
+---
+# =============================================================================
+# CIS AUDIT ROLE - TAREAS PRINCIPALES
+# =============================================================================
+# Auditoría de CIS Benchmark Level 1 para RHEL 9
+# Cada tarea verifica un control y registra el resultado
+# =============================================================================
+
+- name: Crear directorio para reportes de auditoría
+  ansible.builtin.file:
+    path: "{{ audit_reports_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Inicializar lista de resultados de auditoría
+  ansible.builtin.set_fact:
+    cis_audit_results: []
+
+# =============================================================================
+# CONTROL 1.1.1.1 - Verificar que cramfs está deshabilitado
+# =============================================================================
+- name: "CIS 1.1.1.1 | Verificar si módulo cramfs está deshabilitado"
+  when: cis_controls.cis_1_1_1_1_cramfs | default(true)
+  block:
+    - name: Verificar si cramfs está en blacklist
+      ansible.builtin.shell: |
+        modprobe -n -v cramfs 2>&1 | grep -q "install /bin/true" && echo "DISABLED" || echo "ENABLED"
+      register: cramfs_check
+      changed_when: false
+      failed_when: false
+
+    - name: Registrar resultado CIS 1.1.1.1
+      ansible.builtin.set_fact:
+        cis_audit_results: "{{ cis_audit_results + [{'control': '1.1.1.1', 'description': 'Módulo cramfs deshabilitado', 'status': 'PASS' if cramfs_check.stdout == 'DISABLED' else 'FAIL', 'current_value': cramfs_check.stdout}] }}"
+
+# =============================================================================
+# CONTROL 1.4.1 - Verificar que el bootloader tiene password
+# =============================================================================
+- name: "CIS 1.4.1 | Verificar password en bootloader GRUB"
+  when: cis_controls.cis_1_4_1_bootloader_password | default(true)
+  block:
+    - name: Verificar si GRUB tiene password configurado
+      ansible.builtin.shell: |
+        grep -q "^GRUB2_PASSWORD" /boot/grub2/user.cfg 2>/dev/null && echo "CONFIGURED" || echo "NOT_CONFIGURED"
+      register: grub_password_check
+      changed_when: false
+      failed_when: false
+
+    - name: Registrar resultado CIS 1.4.1
+      ansible.builtin.set_fact:
+        cis_audit_results: "{{ cis_audit_results + [{'control': '1.4.1', 'description': 'Password en bootloader GRUB', 'status': 'PASS' if grub_password_check.stdout == 'CONFIGURED' else 'FAIL', 'current_value': grub_password_check.stdout}] }}"
+
+# =============================================================================
+# CONTROL 1.5.1 - Verificar permisos de /etc/motd
+# =============================================================================
+- name: "CIS 1.5.1 | Verificar permisos de /etc/motd"
+  when: cis_controls.cis_1_5_1_motd_permissions | default(true)
+  block:
+    - name: Obtener permisos de /etc/motd
+      ansible.builtin.stat:
+        path: /etc/motd
+      register: motd_stat
+
+    - name: Registrar resultado CIS 1.5.1
+      ansible.builtin.set_fact:
+        cis_audit_results: "{{ cis_audit_results + [{'control': '1.5.1', 'description': 'Permisos de /etc/motd (debe ser 0644)', 'status': 'PASS' if motd_stat.stat.exists and motd_stat.stat.mode == '0644' else 'FAIL', 'current_value': motd_stat.stat.mode | default('FILE_NOT_FOUND')}] }}"
+
+# =============================================================================
+# CONTROL 3.4.1.1 - Verificar que firewalld está instalado
+# =============================================================================
+- name: "CIS 3.4.1.1 | Verificar firewalld instalado y activo"
+  when: cis_controls.cis_3_4_1_1_firewalld | default(true)
+  block:
+    - name: Verificar si firewalld está instalado
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Verificar estado del servicio firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+      register: firewalld_service
+      failed_when: false
+
+    - name: Registrar resultado CIS 3.4.1.1
+      ansible.builtin.set_fact:
+        cis_audit_results: "{{ cis_audit_results + [{'control': '3.4.1.1', 'description': 'Firewalld instalado y activo', 'status': 'PASS' if 'firewalld' in ansible_facts.packages and firewalld_service.status.ActiveState == 'active' else 'FAIL', 'current_value': firewalld_service.status.ActiveState | default('NOT_INSTALLED')}] }}"
+
+# =============================================================================
+# CONTROL 4.2.1.1 - Verificar que rsyslog está instalado
+# =============================================================================
+- name: "CIS 4.2.1.1 | Verificar rsyslog instalado y activo"
+  when: cis_controls.cis_4_2_1_1_rsyslog | default(true)
+  block:
+    - name: Verificar estado del servicio rsyslog
+      ansible.builtin.systemd:
+        name: rsyslog
+      register: rsyslog_service
+      failed_when: false
+
+    - name: Registrar resultado CIS 4.2.1.1
+      ansible.builtin.set_fact:
+        cis_audit_results: "{{ cis_audit_results + [{'control': '4.2.1.1', 'description': 'Rsyslog instalado y activo', 'status': 'PASS' if rsyslog_service.status.ActiveState == 'active' else 'FAIL', 'current_value': rsyslog_service.status.ActiveState | default('NOT_INSTALLED')}] }}"
+
+# =============================================================================
+# CONTROL 5.2.1 - Verificar permisos de /etc/ssh/sshd_config
+# =============================================================================
+- name: "CIS 5.2.1 | Verificar permisos de sshd_config"
+  when: cis_controls.cis_5_2_1_sshd_permissions | default(true)
+  block:
+    - name: Obtener permisos de /etc/ssh/sshd_config
+      ansible.builtin.stat:
+        path: /etc/ssh/sshd_config
+      register: sshd_config_stat
+
+    - name: Registrar resultado CIS 5.2.1
+      ansible.builtin.set_fact:
+        cis_audit_results: "{{ cis_audit_results + [{'control': '5.2.1', 'description': 'Permisos de sshd_config (debe ser 0600)', 'status': 'PASS' if sshd_config_stat.stat.mode == '0600' else 'FAIL', 'current_value': sshd_config_stat.stat.mode}] }}"
+
+# =============================================================================
+# CONTROL 5.2.4 - SSH: Deshabilitar root login
+# =============================================================================
+- name: "CIS 5.2.4 | Verificar SSH PermitRootLogin deshabilitado"
+  when: cis_controls.cis_5_2_4_ssh_root_login | default(true)
+  block:
+    - name: Verificar configuración PermitRootLogin
+      ansible.builtin.shell: |
+        grep -E "^PermitRootLogin" /etc/ssh/sshd_config | awk '{print $2}'
+      register: ssh_root_login
+      changed_when: false
+      failed_when: false
+
+    - name: Registrar resultado CIS 5.2.4
+      ansible.builtin.set_fact:
+        cis_audit_results: "{{ cis_audit_results + [{'control': '5.2.4', 'description': 'SSH PermitRootLogin deshabilitado', 'status': 'PASS' if ssh_root_login.stdout == 'no' else 'FAIL', 'current_value': ssh_root_login.stdout | default('NOT_SET')}] }}"
+
+# =============================================================================
+# CONTROL 5.2.11 - SSH: MaxAuthTries configurado
+# =============================================================================
+- name: "CIS 5.2.11 | Verificar SSH MaxAuthTries"
+  when: cis_controls.cis_5_2_11_ssh_max_auth_tries | default(true)
+  block:
+    - name: Verificar configuración MaxAuthTries
+      ansible.builtin.shell: |
+        grep -E "^MaxAuthTries" /etc/ssh/sshd_config | awk '{print $2}'
+      register: ssh_max_auth
+      changed_when: false
+      failed_when: false
+
+    - name: Registrar resultado CIS 5.2.11
+      ansible.builtin.set_fact:
+        cis_audit_results: "{{ cis_audit_results + [{'control': '5.2.11', 'description': 'SSH MaxAuthTries <= 4', 'status': 'PASS' if ssh_max_auth.stdout | int <= cis_expected_values.ssh_max_auth_tries else 'FAIL', 'current_value': ssh_max_auth.stdout | default('NOT_SET')}] }}"
+
+# =============================================================================
+# CONTROL 5.4.1.1 - Política de expiración de contraseñas
+# =============================================================================
+- name: "CIS 5.4.1.1 | Verificar política de expiración de contraseñas"
+  when: cis_controls.cis_5_4_1_1_password_expiry | default(true)
+  block:
+    - name: Verificar PASS_MAX_DAYS en login.defs
+      ansible.builtin.shell: |
+        grep -E "^PASS_MAX_DAYS" /etc/login.defs | awk '{print $2}'
+      register: pass_max_days
+      changed_when: false
+      failed_when: false
+
+    - name: Registrar resultado CIS 5.4.1.1
+      ansible.builtin.set_fact:
+        cis_audit_results: "{{ cis_audit_results + [{'control': '5.4.1.1', 'description': 'PASS_MAX_DAYS <= 365', 'status': 'PASS' if pass_max_days.stdout | int <= cis_expected_values.password_max_days else 'FAIL', 'current_value': pass_max_days.stdout | default('NOT_SET')}] }}"
+
+# =============================================================================
+# CONTROL 6.1.1 - Verificar integridad de archivos del sistema
+# =============================================================================
+- name: "CIS 6.1.1 | Verificar AIDE instalado para integridad de archivos"
+  when: cis_controls.cis_6_1_1_system_file_integrity | default(true)
+  block:
+    - name: Verificar si AIDE está instalado
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Registrar resultado CIS 6.1.1
+      ansible.builtin.set_fact:
+        cis_audit_results: "{{ cis_audit_results + [{'control': '6.1.1', 'description': 'AIDE instalado para integridad de archivos', 'status': 'PASS' if 'aide' in ansible_facts.packages else 'FAIL', 'current_value': 'INSTALLED' if 'aide' in ansible_facts.packages else 'NOT_INSTALLED'}] }}"
+
+# =============================================================================
+# RESUMEN DE AUDITORÍA
+# =============================================================================
+- name: Calcular estadísticas de auditoría
+  ansible.builtin.set_fact:
+    audit_summary:
+      total_controls: "{{ cis_audit_results | length }}"
+      passed: "{{ cis_audit_results | selectattr('status', 'equalto', 'PASS') | list | length }}"
+      failed: "{{ cis_audit_results | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+      compliance_percentage: "{{ ((cis_audit_results | selectattr('status', 'equalto', 'PASS') | list | length) / (cis_audit_results | length) * 100) | round(1) }}"
+      scan_timestamp: "{{ scan_timestamp }}"
+      hostname: "{{ inventory_hostname }}"
+
+- name: Mostrar resumen de auditoría
+  ansible.builtin.debug:
+    msg: |
+      
+      ══════════════════════════════════════════════════════════════
+      RESUMEN DE AUDITORÍA CIS BENCHMARK LEVEL {{ cis_level }}
+      ══════════════════════════════════════════════════════════════
+      Servidor: {{ inventory_hostname }}
+      Fecha: {{ scan_timestamp }}
+      ──────────────────────────────────────────────────────────────
+      Total de Controles: {{ audit_summary.total_controls }}
+      ✅ Cumplidos (PASS): {{ audit_summary.passed }}
+      ❌ No Cumplidos (FAIL): {{ audit_summary.failed }}
+      📊 Porcentaje de Cumplimiento: {{ audit_summary.compliance_percentage }}%
+      ══════════════════════════════════════════════════════════════
+
+- name: Mostrar detalle de controles fallidos
+  ansible.builtin.debug:
+    msg: "❌ {{ item.control }} - {{ item.description }} | Valor actual: {{ item.current_value }}"
+  loop: "{{ cis_audit_results | selectattr('status', 'equalto', 'FAIL') | list }}"
+  when: cis_audit_results | selectattr('status', 'equalto', 'FAIL') | list | length > 0

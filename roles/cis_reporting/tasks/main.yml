@@ -1,0 +1,145 @@
+---
+# =============================================================================
+# CIS REPORTING ROLE - TAREAS PRINCIPALES
+# =============================================================================
+# Genera reportes HTML y envía notificaciones por email
+# =============================================================================
+
+- name: Crear directorio para reportes
+  ansible.builtin.file:
+    path: "{{ report_config.output_dir }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  run_once: true
+
+- name: Generar ID único del reporte
+  ansible.builtin.set_fact:
+    report_id: "CIS-{{ ansible_date_time.epoch }}-{{ 999999 | random }}"
+  run_once: true
+
+- name: Preparar datos para el reporte
+  ansible.builtin.set_fact:
+    report_data:
+      report_id: "{{ report_id }}"
+      report_date: "{{ ansible_date_time.iso8601 }}"
+      organization: "{{ organization }}"
+      cis_level: "{{ cis_level | default(1) }}"
+      server_hostname: "{{ inventory_hostname }}"
+      server_ip: "{{ ansible_host }}"
+      server_os: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+      server_role: "{{ server_role | default('General') }}"
+      scan_timestamp: "{{ scan_timestamp | default(ansible_date_time.iso8601) }}"
+      total_controls: "{{ cis_audit_results | length }}"
+      passed_controls: "{{ cis_audit_results | selectattr('status', 'equalto', 'PASS') | list | length }}"
+      failed_controls: "{{ cis_audit_results | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+      compliance_percentage: "{{ ((cis_audit_results | selectattr('status', 'equalto', 'PASS') | list | length) / (cis_audit_results | length) * 100) | round(1) }}"
+      audit_results: "{{ cis_audit_results }}"
+      remediation_applied: "{{ remediation_applied | default(false) }}"
+
+- name: Generar reporte HTML
+  ansible.builtin.template:
+    src: email_report.j2
+    dest: "{{ report_config.output_dir }}/cis_report_{{ inventory_hostname }}_{{ report_timestamp }}.html"
+    mode: '0644'
+  delegate_to: localhost
+  vars:
+    report_id: "{{ report_data.report_id }}"
+    report_date: "{{ report_data.report_date }}"
+    organization: "{{ report_data.organization }}"
+    cis_level: "{{ report_data.cis_level }}"
+    server_hostname: "{{ report_data.server_hostname }}"
+    server_ip: "{{ report_data.server_ip }}"
+    server_os: "{{ report_data.server_os }}"
+    server_role: "{{ report_data.server_role }}"
+    scan_timestamp: "{{ report_data.scan_timestamp }}"
+    total_controls: "{{ report_data.total_controls }}"
+    passed_controls: "{{ report_data.passed_controls }}"
+    failed_controls: "{{ report_data.failed_controls }}"
+    compliance_percentage: "{{ report_data.compliance_percentage }}"
+    audit_results: "{{ report_data.audit_results }}"
+    remediation_applied: "{{ report_data.remediation_applied }}"
+
+- name: Mostrar ubicación del reporte generado
+  ansible.builtin.debug:
+    msg: |
+      ══════════════════════════════════════════════════════════════
+      📄 REPORTE GENERADO EXITOSAMENTE
+      ══════════════════════════════════════════════════════════════
+      📁 Archivo: {{ report_config.output_dir }}/cis_report_{{ inventory_hostname }}_{{ report_timestamp }}.html
+      🖥️  Servidor: {{ inventory_hostname }}
+      📊 Cumplimiento: {{ report_data.compliance_percentage }}%
+      ══════════════════════════════════════════════════════════════
+
+- name: Determinar estado de cumplimiento
+  ansible.builtin.set_fact:
+    compliance_status: >-
+      {% if report_data.compliance_percentage | float < 50 %}CRÍTICO
+      {% elif report_data.compliance_percentage | float < 80 %}ADVERTENCIA
+      {% else %}BUENO{% endif %}
+
+- name: Enviar reporte por email
+  when: email_enabled | default(false) and email_config.smtp_password | length > 0
+  block:
+    - name: Enviar email con reporte
+      community.general.mail:
+        host: "{{ email_config.smtp_host }}"
+        port: "{{ email_config.smtp_port }}"
+        username: "{{ email_config.smtp_user }}"
+        password: "{{ email_config.smtp_password }}"
+        from: "{{ email_config.from_address }}"
+        to: "{{ email_config.to_addresses }}"
+        cc: "{{ email_config.cc_addresses | default([]) }}"
+        subject: "{{ email_config.subject_prefix }} Auditoría CIS {{ inventory_hostname }} - {{ compliance_status }} ({{ report_data.compliance_percentage }}%)"
+        subtype: html
+        body: "{{ lookup('template', 'email_report.j2') }}"
+        attach:
+          - "{{ report_config.output_dir }}/cis_report_{{ inventory_hostname }}_{{ report_timestamp }}.html"
+      delegate_to: localhost
+      vars:
+        report_id: "{{ report_data.report_id }}"
+        report_date: "{{ report_data.report_date }}"
+        organization: "{{ report_data.organization }}"
+        cis_level: "{{ report_data.cis_level }}"
+        server_hostname: "{{ report_data.server_hostname }}"
+        server_ip: "{{ report_data.server_ip }}"
+        server_os: "{{ report_data.server_os }}"
+        server_role: "{{ report_data.server_role }}"
+        scan_timestamp: "{{ report_data.scan_timestamp }}"
+        total_controls: "{{ report_data.total_controls }}"
+        passed_controls: "{{ report_data.passed_controls }}"
+        failed_controls: "{{ report_data.failed_controls }}"
+        compliance_percentage: "{{ report_data.compliance_percentage }}"
+        audit_results: "{{ report_data.audit_results }}"
+        remediation_applied: "{{ report_data.remediation_applied }}"
+
+    - name: Confirmar envío de email
+      ansible.builtin.debug:
+        msg: "✅ Email enviado exitosamente a: {{ email_config.to_addresses | join(', ') }}"
+
+- name: Advertencia si email no está configurado
+  ansible.builtin.debug:
+    msg: |
+      ⚠️ ENVÍO DE EMAIL DESHABILITADO
+      Para habilitar, configure las credenciales SMTP en:
+      - email_config.smtp_user
+      - email_config.smtp_password (usar Ansible Vault)
+  when: not email_enabled | default(false) or email_config.smtp_password | length == 0
+
+- name: Limpiar reportes antiguos
+  ansible.builtin.find:
+    paths: "{{ report_config.output_dir }}"
+    age: "{{ report_config.retention_days }}d"
+    patterns: "*.html"
+  register: old_reports
+  delegate_to: localhost
+  run_once: true
+
+- name: Eliminar reportes antiguos
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_reports.files }}"
+  delegate_to: localhost
+  run_once: true
+  when: old_reports.matched > 0

@@ -1,13 +1,74 @@
 ---
-- name: Prueba de Conectividad Simple
-  hosts: all
+# =============================================================================
+# PLAYBOOK: CIS REMEDIATION
+# =============================================================================
+# Aplica remediación automática de controles CIS Benchmark Level 1
+# ⚠️ IMPORTANTE: Por defecto la remediación está DESACTIVADA
+# =============================================================================
+# USO:
+#   # Solo auditar (modo seguro):
+#   ansible-playbook playbooks/02_cis_remediation.yml -i inventories/gcp_hosts.yml
+#
+#   # Aplicar remediaciones:
+#   ansible-playbook playbooks/02_cis_remediation.yml -i inventories/gcp_hosts.yml -e "apply_remediation=true"
+#
+#   # Remediar servidor específico:
+#   ansible-playbook playbooks/02_cis_remediation.yml -i inventories/gcp_hosts.yml -e "apply_remediation=true" --limit web-server
+# =============================================================================
+
+- name: CIS Benchmark Level 1 - Remediación Automática
+  hosts: linux_servers
   gather_facts: yes
-  tasks:
-    - name: Verificar conectividad
-      ansible.builtin.ping:
-      
-    - name: Obtener información básica del sistema
+  become: yes
+
+  pre_tasks:
+    - name: Mostrar advertencia de remediación
       ansible.builtin.debug:
-        msg: "Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }} | Hostname: {{ ansible_hostname }}"
+        msg: |
+          ══════════════════════════════════════════════════════════════
+          ⚠️  REMEDIACIÓN CIS BENCHMARK - {{ 'MODO ACTIVO' if apply_remediation | default(false) else 'MODO SIMULACIÓN' }}
+          ══════════════════════════════════════════════════════════════
+          🖥️  Servidor: {{ inventory_hostname }}
+          🌐 IP: {{ ansible_host }}
+          🐧 Sistema Operativo: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          📅 Fecha: {{ ansible_date_time.iso8601 }}
+          🔒 Nivel CIS: {{ cis_level | default(1) }}
+          ──────────────────────────────────────────────────────────────
+          {% if not apply_remediation | default(false) %}
+          ℹ️  Para aplicar cambios ejecute con: -e "apply_remediation=true"
+          {% else %}
+          ⚠️  SE APLICARÁN CAMBIOS EN EL SISTEMA
+          {% endif %}
+          ══════════════════════════════════════════════════════════════
 
+    - name: Capturar estado ANTES de remediación
+      ansible.builtin.set_fact:
+        pre_remediation_state:
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+          hostname: "{{ inventory_hostname }}"
+          kernel: "{{ ansible_kernel }}"
+          uptime_seconds: "{{ ansible_uptime_seconds }}"
 
+  roles:
+    - role: cis_remediation
+
+  post_tasks:
+    - name: Capturar estado DESPUÉS de remediación
+      ansible.builtin.set_fact:
+        post_remediation_state:
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+          remediation_applied: "{{ apply_remediation | default(false) }}"
+          controls_remediated: "{{ remediation_results | length }}"
+
+    - name: Guardar resultados para reporte
+      ansible.builtin.set_fact:
+        server_remediation_results:
+          hostname: "{{ inventory_hostname }}"
+          ip: "{{ ansible_host }}"
+          os: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+          pre_state: "{{ pre_remediation_state }}"
+          post_state: "{{ post_remediation_state }}"
+          results: "{{ remediation_results }}"
+          summary: "{{ remediation_summary }}"
+      delegate_to: localhost
+      run_once: false

@@ -1,0 +1,61 @@
+---
+# =============================================================================
+# VARIABLES POR DEFECTO - CIS REPORTING ROLE
+# =============================================================================
+# Configuración para generación y envío de reportes de auditoría CIS
+# =============================================================================
+
+# =============================================================================
+# CONFIGURACIÓN DE EMAIL
+# =============================================================================
+email_enabled: true
+email_config:
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 587
+  smtp_user: "{{ vault_smtp_user | default('notificaciones@empresa.com') }}"
+  smtp_password: "{{ vault_smtp_password | default('') }}"
+  from_address: "AAP Security <aap-security@empresa.com>"
+  to_addresses:
+    - "seguridad@empresa.com"
+    - "it-ops@empresa.com"
+  cc_addresses: []
+  subject_prefix: "[AAP Security]"
+
+# =============================================================================
+# CONFIGURACIÓN DE REPORTES
+# =============================================================================
+report_config:
+  # Directorio donde se guardan los reportes
+  output_dir: "/tmp/cis_reports"
+  
+  # Formato del nombre del archivo
+  filename_format: "cis_audit_report_{{ report_timestamp }}.html"
+  
+  # Retención de reportes (días)
+  retention_days: 30
+  
+  # Incluir detalles técnicos en el reporte
+  include_technical_details: true
+  
+  # Incluir recomendaciones de remediación
+  include_recommendations: true
+
+# Timestamp para el reporte
+report_timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}"
+
+# =============================================================================
+# UMBRALES DE CUMPLIMIENTO
+# =============================================================================
+compliance_thresholds:
+  critical: 50    # < 50% = CRÍTICO (rojo)
+  warning: 80     # < 80% = ADVERTENCIA (amarillo)
+  good: 100       # >= 80% = BUENO (verde)
+
+# =============================================================================
+# INFORMACIÓN DE LA ORGANIZACIÓN
+# =============================================================================
+organization:
+  name: "Empresa S.A. de C.V."
+  logo_url: ""
+  security_team: "Equipo de Seguridad IT"
+  contact_email: "seguridad@empresa.com"

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Auditoría CIS Benchmark</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .summary-cards {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: #fafafa;
+            flex-wrap: wrap;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            min-width: 150px;
+            margin: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .card .number {
+            font-size: 36px;
+            font-weight: bold;
+        }
+        .card .label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .card.pass .number { color: #2e7d32; }
+        .card.fail .number { color: #c62828; }
+        .card.total .number { color: #1565c0; }
+        .card.percent .number { color: #6a1b9a; }
+        
+        .compliance-bar {
+            margin: 20px 30px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 30px;
+            overflow: hidden;
+        }
+        .compliance-fill {
+            height: 100%;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.5s ease;
+        }
+        .compliance-critical { background: linear-gradient(90deg, #c62828, #e53935); }
+        .compliance-warning { background: linear-gradient(90deg, #f57c00, #ff9800); }
+        .compliance-good { background: linear-gradient(90deg, #2e7d32, #43a047); }
+        
+        .section {
+            padding: 20px 30px;
+            border-bottom: 1px solid #eee;
+        }
+        .section h2 {
+            color: #1a237e;
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3949ab;
+        }
+        .server-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .info-item {
+            background: #f5f5f5;
+            padding: 10px 15px;
+            border-radius: 5px;
+        }
+        .info-item .label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .info-item .value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        tr:hover {
+            background: #fafafa;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-pass {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-fail {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .recommendations {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .recommendations h3 {
+            color: #e65100;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .recommendations ul {
+            margin-left: 20px;
+        }
+        .recommendations li {
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        
+        .footer {
+            background: #263238;
+            color: #b0bec5;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .footer a {
+            color: #4fc3f7;
+            text-decoration: none;
+        }
+        
+        @media (max-width: 600px) {
+            .summary-cards {
+                flex-direction: column;
+            }
+            .card {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔒 Reporte de Auditoría CIS Benchmark</h1>
+            <div class="subtitle">{{ organization.name }} | Generado: {{ report_date }}</div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="card total">
+                <div class="number">{{ total_controls }}</div>
+                <div class="label">Controles Evaluados</div>
+            </div>
+            <div class="card pass">
+                <div class="number">{{ passed_controls }}</div>
+                <div class="label">✅ Cumplidos</div>
+            </div>
+            <div class="card fail">
+                <div class="number">{{ failed_controls }}</div>
+                <div class="label">❌ No Cumplidos</div>
+            </div>
+            <div class="card percent">
+                <div class="number">{{ compliance_percentage }}%</div>
+                <div class="label">Cumplimiento</div>
+            </div>
+        </div>
+
+        <!-- Compliance Bar -->
+        <div class="compliance-bar">
+            {% if compliance_percentage | float < 50 %}
+            <div class="compliance-fill compliance-critical" style="width: {{ compliance_percentage }}%;">
+            {% elif compliance_percentage | float < 80 %}
+            <div class="compliance-fill compliance-warning" style="width: {{ compliance_percentage }}%;">
+            {% else %}
+            <div class="compliance-fill compliance-good" style="width: {{ compliance_percentage }}%;">
+            {% endif %}
+                {{ compliance_percentage }}% Cumplimiento
+            </div>
+        </div>
+
+        <!-- Server Information -->
+        <div class="section">
+            <h2>📊 Información del Servidor</h2>
+            <div class="server-info">
+                <div class="info-item">
+                    <div class="label">Hostname</div>
+                    <div class="value">{{ server_hostname }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Dirección IP</div>
+                    <div class="value">{{ server_ip }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Sistema Operativo</div>
+                    <div class="value">{{ server_os }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Nivel CIS</div>
+                    <div class="value">Level {{ cis_level }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Fecha de Escaneo</div>
+                    <div class="value">{{ scan_timestamp }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Rol del Servidor</div>
+                    <div class="value">{{ server_role | default('General') }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Results -->
+        <div class="section">
+            <h2>📋 Detalle de Controles Auditados</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Control</th>
+                        <th>Descripción</th>
+                        <th>Valor Actual</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for result in audit_results %}
+                    <tr>
+                        <td><strong>{{ result.control }}</strong></td>
+                        <td>{{ result.description }}</td>
+                        <td><code>{{ result.current_value }}</code></td>
+                        <td>
+                            {% if result.status == 'PASS' %}
+                            <span class="status-badge status-pass">✅ PASS</span>
+                            {% else %}
+                            <span class="status-badge status-fail">❌ FAIL</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Failed Controls Summary -->
+        {% if failed_controls | int > 0 %}
+        <div class="section">
+            <h2>⚠️ Controles que Requieren Atención</h2>
+            <div class="recommendations">
+                <h3>Acciones Recomendadas:</h3>
+                <ul>
+                {% for result in audit_results %}
+                    {% if result.status == 'FAIL' %}
+                    <li><strong>{{ result.control }}</strong>: {{ result.description }} - Valor actual: <code>{{ result.current_value }}</code></li>
+                    {% endif %}
+                {% endfor %}
+                </ul>
+            </div>
+            <p style="margin-top: 15px; font-size: 13px; color: #666;">
+                💡 <strong>Sugerencia:</strong> Ejecute el playbook de remediación para corregir automáticamente estos controles:
+                <br>
+                <code style="background: #f5f5f5; padding: 5px 10px; border-radius: 3px; display: inline-block; margin-top: 5px;">
+                    ansible-playbook playbooks/02_cis_remediation.yml -e "apply_remediation=true"
+                </code>
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Remediation Summary (if applicable) -->
+        {% if remediation_applied | default(false) %}
+        <div class="section">
+            <h2>🔧 Resumen de Remediación Aplicada</h2>
+            <div class="server-info">
+                <div class="info-item">
+                    <div class="label">Estado Antes</div>
+                    <div class="value">{{ pre_compliance }}% Cumplimiento</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Estado Después</div>
+                    <div class="value">{{ post_compliance }}% Cumplimiento</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Controles Remediados</div>
+                    <div class="value">{{ remediated_count }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Este reporte fue generado automáticamente por <strong>Ansible Automation Platform</strong></p>
+            <p>{{ organization.name }} - {{ organization.security_team }}</p>
+            <p>Contacto: <a href="mailto:{{ organization.contact_email }}">{{ organization.contact_email }}</a></p>
+            <p style="margin-top: 10px; font-size: 11px;">CIS Benchmark Level {{ cis_level }} | Reporte ID: {{ report_id }}</p>
+        </div>
+    </div>
+</body>
+</html>

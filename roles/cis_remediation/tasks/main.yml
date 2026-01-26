@@ -1,0 +1,275 @@
+---
+# =============================================================================
+# CIS REMEDIATION ROLE - TAREAS PRINCIPALES
+# =============================================================================
+# Remediación automática de CIS Benchmark Level 1 para RHEL 9
+# Cada tarea corrige un control que no cumple con el estándar
+# =============================================================================
+
+- name: Verificar que la remediación está habilitada
+  ansible.builtin.fail:
+    msg: |
+      ⚠️ REMEDIACIÓN DESACTIVADA
+      Para aplicar correcciones, ejecute con: -e "apply_remediation=true"
+  when: not apply_remediation | default(false)
+
+- name: Crear directorio de backups
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    mode: '0700'
+  when: create_backup | default(true)
+
+- name: Inicializar lista de remediaciones aplicadas
+  ansible.builtin.set_fact:
+    remediation_results: []
+
+# =============================================================================
+# REMEDIACIÓN 1.1.1.1 - Deshabilitar módulo cramfs
+# =============================================================================
+- name: "CIS 1.1.1.1 | Deshabilitar módulo cramfs"
+  when: remediate_controls.cis_1_1_1_1_cramfs | default(true)
+  block:
+    - name: Crear archivo de blacklist para cramfs
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/cramfs.conf
+        content: |
+          # CIS 1.1.1.1 - Deshabilitar cramfs
+          install cramfs /bin/true
+          blacklist cramfs
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Descargar módulo cramfs si está cargado
+      ansible.builtin.modprobe:
+        name: cramfs
+        state: absent
+      failed_when: false
+
+    - name: Registrar remediación 1.1.1.1
+      ansible.builtin.set_fact:
+        remediation_results: "{{ remediation_results + [{'control': '1.1.1.1', 'description': 'Módulo cramfs deshabilitado', 'action': 'Blacklist creado y módulo descargado', 'status': 'APPLIED'}] }}"
+
+# =============================================================================
+# REMEDIACIÓN 1.5.1 - Configurar permisos de /etc/motd
+# =============================================================================
+- name: "CIS 1.5.1 | Configurar /etc/motd"
+  when: remediate_controls.cis_1_5_1_motd_permissions | default(true)
+  block:
+    - name: Backup de /etc/motd existente
+      ansible.builtin.copy:
+        src: /etc/motd
+        dest: "{{ backup_dir }}/motd.backup.{{ remediation_timestamp | regex_replace(':', '-') }}"
+        remote_src: yes
+      failed_when: false
+      when: create_backup | default(true)
+
+    - name: Crear /etc/motd con mensaje corporativo
+      ansible.builtin.copy:
+        dest: /etc/motd
+        content: "{{ corporate_motd }}"
+        mode: "{{ remediation_values.motd_mode }}"
+        owner: root
+        group: root
+
+    - name: Registrar remediación 1.5.1
+      ansible.builtin.set_fact:
+        remediation_results: "{{ remediation_results + [{'control': '1.5.1', 'description': 'Permisos de /etc/motd', 'action': 'Archivo creado con permisos 0644', 'status': 'APPLIED'}] }}"
+
+# =============================================================================
+# REMEDIACIÓN 3.4.1.1 - Instalar y activar firewalld
+# =============================================================================
+- name: "CIS 3.4.1.1 | Instalar y activar firewalld"
+  when: remediate_controls.cis_3_4_1_1_firewalld | default(true)
+  block:
+    - name: Instalar firewalld
+      ansible.builtin.dnf:
+        name: firewalld
+        state: present
+
+    - name: Habilitar y arrancar firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        enabled: yes
+        state: started
+
+    - name: Registrar remediación 3.4.1.1
+      ansible.builtin.set_fact:
+        remediation_results: "{{ remediation_results + [{'control': '3.4.1.1', 'description': 'Firewalld instalado y activo', 'action': 'Paquete instalado y servicio habilitado', 'status': 'APPLIED'}] }}"
+
+# =============================================================================
+# REMEDIACIÓN 4.2.1.1 - Instalar y activar rsyslog
+# =============================================================================
+- name: "CIS 4.2.1.1 | Instalar y activar rsyslog"
+  when: remediate_controls.cis_4_2_1_1_rsyslog | default(true)
+  block:
+    - name: Instalar rsyslog
+      ansible.builtin.dnf:
+        name: rsyslog
+        state: present
+
+    - name: Habilitar y arrancar rsyslog
+      ansible.builtin.systemd:
+        name: rsyslog
+        enabled: yes
+        state: started
+
+    - name: Registrar remediación 4.2.1.1
+      ansible.builtin.set_fact:
+        remediation_results: "{{ remediation_results + [{'control': '4.2.1.1', 'description': 'Rsyslog instalado y activo', 'action': 'Paquete instalado y servicio habilitado', 'status': 'APPLIED'}] }}"
+
+# =============================================================================
+# REMEDIACIÓN 5.2.1 - Permisos de sshd_config
+# =============================================================================
+- name: "CIS 5.2.1 | Corregir permisos de sshd_config"
+  when: remediate_controls.cis_5_2_1_sshd_permissions | default(true)
+  block:
+    - name: Establecer permisos correctos en sshd_config
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config
+        mode: "{{ remediation_values.sshd_config_mode }}"
+        owner: root
+        group: root
+
+    - name: Registrar remediación 5.2.1
+      ansible.builtin.set_fact:
+        remediation_results: "{{ remediation_results + [{'control': '5.2.1', 'description': 'Permisos de sshd_config', 'action': 'Permisos establecidos a 0600', 'status': 'APPLIED'}] }}"
+
+# =============================================================================
+# REMEDIACIÓN 5.2.4 - Deshabilitar SSH root login
+# =============================================================================
+- name: "CIS 5.2.4 | Deshabilitar SSH PermitRootLogin"
+  when: remediate_controls.cis_5_2_4_ssh_root_login | default(true)
+  block:
+    - name: Backup de sshd_config
+      ansible.builtin.copy:
+        src: /etc/ssh/sshd_config
+        dest: "{{ backup_dir }}/sshd_config.backup.{{ remediation_timestamp | regex_replace(':', '-') }}"
+        remote_src: yes
+      when: create_backup | default(true)
+
+    - name: Configurar PermitRootLogin no
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        validate: '/usr/sbin/sshd -t -f %s'
+      notify: restart sshd
+
+    - name: Registrar remediación 5.2.4
+      ansible.builtin.set_fact:
+        remediation_results: "{{ remediation_results + [{'control': '5.2.4', 'description': 'SSH PermitRootLogin', 'action': 'Configurado a no', 'status': 'APPLIED'}] }}"
+
+# =============================================================================
+# REMEDIACIÓN 5.2.11 - Configurar SSH MaxAuthTries
+# =============================================================================
+- name: "CIS 5.2.11 | Configurar SSH MaxAuthTries"
+  when: remediate_controls.cis_5_2_11_ssh_max_auth_tries | default(true)
+  block:
+    - name: Configurar MaxAuthTries
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?MaxAuthTries'
+        line: 'MaxAuthTries {{ remediation_values.ssh_max_auth_tries }}'
+        validate: '/usr/sbin/sshd -t -f %s'
+      notify: restart sshd
+
+    - name: Registrar remediación 5.2.11
+      ansible.builtin.set_fact:
+        remediation_results: "{{ remediation_results + [{'control': '5.2.11', 'description': 'SSH MaxAuthTries', 'action': 'Configurado a {{ remediation_values.ssh_max_auth_tries }}', 'status': 'APPLIED'}] }}"
+
+# =============================================================================
+# REMEDIACIÓN 5.4.1.1 - Política de expiración de contraseñas
+# =============================================================================
+- name: "CIS 5.4.1.1 | Configurar política de contraseñas"
+  when: remediate_controls.cis_5_4_1_1_password_expiry | default(true)
+  block:
+    - name: Backup de login.defs
+      ansible.builtin.copy:
+        src: /etc/login.defs
+        dest: "{{ backup_dir }}/login.defs.backup.{{ remediation_timestamp | regex_replace(':', '-') }}"
+        remote_src: yes
+      when: create_backup | default(true)
+
+    - name: Configurar PASS_MAX_DAYS
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_MAX_DAYS'
+        line: 'PASS_MAX_DAYS   {{ remediation_values.password_max_days }}'
+
+    - name: Configurar PASS_MIN_DAYS
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_MIN_DAYS'
+        line: 'PASS_MIN_DAYS   {{ remediation_values.password_min_days }}'
+
+    - name: Configurar PASS_WARN_AGE
+      ansible.builtin.lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_WARN_AGE'
+        line: 'PASS_WARN_AGE   {{ remediation_values.password_warn_age }}'
+
+    - name: Registrar remediación 5.4.1.1
+      ansible.builtin.set_fact:
+        remediation_results: "{{ remediation_results + [{'control': '5.4.1.1', 'description': 'Política de contraseñas', 'action': 'PASS_MAX_DAYS={{ remediation_values.password_max_days }}, MIN={{ remediation_values.password_min_days }}, WARN={{ remediation_values.password_warn_age }}', 'status': 'APPLIED'}] }}"
+
+# =============================================================================
+# REMEDIACIÓN 6.1.1 - Instalar AIDE
+# =============================================================================
+- name: "CIS 6.1.1 | Instalar AIDE para integridad de archivos"
+  when: remediate_controls.cis_6_1_1_system_file_integrity | default(true)
+  block:
+    - name: Instalar AIDE
+      ansible.builtin.dnf:
+        name: aide
+        state: present
+
+    - name: Verificar si base de datos AIDE existe
+      ansible.builtin.stat:
+        path: /var/lib/aide/aide.db.gz
+      register: aide_db
+
+    - name: Inicializar base de datos AIDE (puede tomar varios minutos)
+      ansible.builtin.command: aide --init
+      when: not aide_db.stat.exists
+      async: 600
+      poll: 30
+
+    - name: Mover base de datos AIDE inicial
+      ansible.builtin.command: mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+      when: not aide_db.stat.exists
+      failed_when: false
+
+    - name: Registrar remediación 6.1.1
+      ansible.builtin.set_fact:
+        remediation_results: "{{ remediation_results + [{'control': '6.1.1', 'description': 'AIDE instalado', 'action': 'Paquete instalado y base de datos inicializada', 'status': 'APPLIED'}] }}"
+
+# =============================================================================
+# RESUMEN DE REMEDIACIÓN
+# =============================================================================
+- name: Calcular estadísticas de remediación
+  ansible.builtin.set_fact:
+    remediation_summary:
+      total_remediated: "{{ remediation_results | length }}"
+      hostname: "{{ inventory_hostname }}"
+      timestamp: "{{ remediation_timestamp }}"
+
+- name: Mostrar resumen de remediación
+  ansible.builtin.debug:
+    msg: |
+      
+      ══════════════════════════════════════════════════════════════
+      RESUMEN DE REMEDIACIÓN CIS BENCHMARK LEVEL {{ cis_level }}
+      ══════════════════════════════════════════════════════════════
+      🖥️  Servidor: {{ inventory_hostname }}
+      📅 Fecha: {{ remediation_timestamp }}
+      ──────────────────────────────────────────────────────────────
+      ✅ Total de Controles Remediados: {{ remediation_summary.total_remediated }}
+      📁 Backups guardados en: {{ backup_dir }}
+      ══════════════════════════════════════════════════════════════
+
+- name: Mostrar detalle de remediaciones aplicadas
+  ansible.builtin.debug:
+    msg: "✅ {{ item.control }} - {{ item.description }} | {{ item.action }}"
+  loop: "{{ remediation_results }}"
