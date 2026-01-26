@@ -1,8 +1,13 @@
 ---
-- name: Prueba de conectividad con inventario dinámico GCP
+- name: Prueba de Conectividad Simple
   hosts: all
-  gather_facts: false
-
+  gather_facts: yes
   tasks:
-    - name: Probar conexión con los hosts
+    - name: Verificar conectividad
       ansible.builtin.ping:
+      
+    - name: Obtener información básica del sistema
+      ansible.builtin.debug:
+        msg: "Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }} | Hostname: {{ ansible_hostname }}"
+
+
