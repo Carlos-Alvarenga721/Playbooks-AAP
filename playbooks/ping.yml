@@ -1,8 +1,0 @@
----
-- name: Prueba de conectividad con inventario dinámico GCP
-  hosts: all
-  gather_facts: false
-
-  tasks:
-    - name: Probar conexión con los hosts
-      ansible.builtin.ping:

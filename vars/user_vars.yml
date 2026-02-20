@@ -1,0 +1,111 @@
+# =============================================================================
+# vars/user_vars.yml
+# Módulo: Gestión del Ciclo de Vida de Usuarios (Windows + Linux)
+# POC AAP - GCP | Fase 3
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# DOMINIO ACTIVE DIRECTORY
+# Estos valores serán sobreescritos por la Survey del AAP Controller
+# o por el vault cuando el dominio esté definido
+# -----------------------------------------------------------------------------
+ad_domain: "{{ vault_ad_domain | default('DOMINIO_PENDIENTE') }}"
+ad_domain_fqdn: "{{ vault_ad_domain_fqdn | default('dominio.local') }}"
+ad_dc_hostname: "{{ vault_ad_dc_hostname | default('DC01') }}"
+
+# NOTA: Una vez definas tu dominio, actualiza vault/secrets.yml con:
+#   vault_ad_domain: "TU_DOMINIO_NETBIOS"       ej: CORP
+#   vault_ad_domain_fqdn: "TU_DOMINIO_FQDN"     ej: corp.local
+#   vault_ad_dc_hostname: "NOMBRE_DC"            ej: DC01
+
+# -----------------------------------------------------------------------------
+# CONFIGURACIÓN LINUX (Oracle Linux - Servidores Web, App, DB)
+# Basado en arquitectura del POC: RHEL 9 / Oracle Linux
+# -----------------------------------------------------------------------------
+linux_default_shell: "/bin/bash"
+linux_base_home: "/home"
+
+# Grupos sudo por servidor según rol (alineado a hardening CIS)
+linux_sudo_group: "wheel"
+
+# Grupos por tipo de servidor (targets del POC)
+linux_server_groups:
+  web:
+    group: "webusers"
+    sudo_access: false
+  app:
+    group: "appusers"
+    sudo_access: false
+  db:
+    group: "dbusers"
+    sudo_access: false
+  admin:
+    group: "wheel"
+    sudo_access: true
+
+# -----------------------------------------------------------------------------
+# CONFIGURACIÓN DE CONTRASEÑAS
+# Política alineada a CIS Benchmark Level 1 (Fase 3 del POC)
+# -----------------------------------------------------------------------------
+password_policy:
+  min_length: 12
+  max_age_days: 90
+  min_age_days: 1
+  warn_age_days: 7
+  history_count: 5
+  complexity_required: true
+
+# Tiempo de expiración forzada al desactivar usuario (días)
+deactivate_expire_days: 0
+
+# -----------------------------------------------------------------------------
+# CONFIGURACIÓN DE REPORTES Y NOTIFICACIONES
+# Sistema de email del POC (el módulo de notificaciones de Ansible)
+# -----------------------------------------------------------------------------
+report_output_dir: "/tmp/aap_reports/users"
+report_timestamp_format: "%Y%m%d_%H%M%S"
+
+email_notifications:
+  enabled: true
+  subject_prefix: "[AAP-POC]"
+  # El destinatario puede venir de la Survey del portal self-service
+  default_recipient: "{{ vault_email_recipient | default('admin@empresa.com') }}"
+  smtp_host: "{{ vault_smtp_host }}"
+  smtp_port: "{{ vault_smtp_port | default(587) }}"
+  sender: "{{ vault_email_sender | default('aap-poc@empresa.com') }}"
+
+# -----------------------------------------------------------------------------
+# MAPEO DE ACCIONES DEL PORTAL SELF-SERVICE
+# Estos valores son los que llegan desde la Survey del AAP Controller
+# El portal enviará uno de estos valores en la variable: user_action
+# -----------------------------------------------------------------------------
+valid_user_actions:
+  - "add"           # Flujo 1: Agregar usuario
+  - "deactivate"    # Flujo 2: Desactivar usuario
+  - "privileges"    # Flujo 3: Gestión de privilegios
+  - "password_reset" # Flujo 4: Reseteo de contraseña
+
+# Roles/grupos de seguridad disponibles para asignación (Flujo 3)
+available_roles:
+  - name: "Developers"
+    ad_group: "GRP_Developers"
+    linux_group: "developers"
+    sudo_access: false
+  - name: "DBAs"
+    ad_group: "GRP_DBAs"
+    linux_group: "dba"
+    sudo_access: true
+  - name: "WebAdmins"
+    ad_group: "GRP_WebAdmins"
+    linux_group: "webadmin"
+    sudo_access: false
+  - name: "SysAdmins"
+    ad_group: "GRP_SysAdmins"
+    linux_group: "wheel"
+    sudo_access: true
+
+# -----------------------------------------------------------------------------
+# LOGGING Y TRAZABILIDAD
+# Auditd ya configurado por CIS (01/02 playbooks) — aquí solo referenciamos
+# -----------------------------------------------------------------------------
+audit_log_tag: "AAP_USER_MGMT"

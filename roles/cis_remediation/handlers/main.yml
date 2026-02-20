@@ -1,24 +1,12 @@
 ---
-# =============================================================================
-# HANDLERS - CIS REMEDIATION ROLE
-# =============================================================================
-# Handlers para reiniciar servicios después de cambios de configuración
-# =============================================================================
+# Handlers para el rol cis_remediation
 
-- name: restart sshd
-  ansible.builtin.systemd:
+- name: Reiniciar sshd
+  ansible.builtin.service:
     name: sshd
     state: restarted
-  listen: restart sshd
 
-- name: restart firewalld
-  ansible.builtin.systemd:
-    name: firewalld
+- name: Reiniciar auditd
+  ansible.builtin.service:
+    name: auditd
     state: restarted
-  listen: restart firewalld
-
-- name: restart rsyslog
-  ansible.builtin.systemd:
-    name: rsyslog
-    state: restarted
-  listen: restart rsyslog
