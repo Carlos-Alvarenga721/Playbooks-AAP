@@ -1,0 +1,108 @@
+---
+- name: CIS Level 1 - Remediacion de Cumplimiento
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    - name: "CIS 1 | SSH | Deshabilitar acceso root por SSH"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        state: present
+        backup: yes
+      notify: Reiniciar SSH
+
+    - name: "CIS 2 | SSH | Deshabilitar autenticacion por password"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+        state: present
+        backup: yes
+      notify: Reiniciar SSH
+
+    - name: "CIS 3 | Firewall | Asegurar que firewalld esta activo y habilitado"
+      service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: "CIS 3 | Firewall | Permitir SSH"
+      firewalld:
+        service: ssh
+        permanent: true
+        state: enabled
+        immediate: true
+
+    - name: "CIS 3 | Firewall | Permitir HTTP"
+      firewalld:
+        service: http
+        permanent: true
+        state: enabled
+        immediate: true
+
+    - name: "CIS 3 | Firewall | Permitir HTTPS"
+      firewalld:
+        service: https
+        permanent: true
+        state: enabled
+        immediate: true
+
+    - name: "CIS 4 | Auditd | Asegurar que auditd esta activo y habilitado"
+      service:
+        name: auditd
+        state: started
+        enabled: true
+
+    - name: "CIS 4 | Auditd | Configurar reglas basicas de auditoria"
+      copy:
+        dest: /etc/audit/rules.d/cis_basic.rules
+        content: |
+          # CIS Level 1 - Reglas basicas de auditoria
+          -w /etc/passwd -p wa -k identity
+          -w /etc/shadow -p wa -k identity
+          -w /etc/sudoers -p wa -k sudoers
+          -w /var/log/auth.log -p wa -k auth_logs
+        backup: yes
+      notify: Reiniciar Auditd
+
+    - name: "CIS 5 | Rsyslog | Asegurar que rsyslog esta activo y habilitado"
+      service:
+        name: rsyslog
+        state: started
+        enabled: true
+
+    - name: "CIS 6 | NTP | Asegurar que chronyd esta activo y habilitado"
+      service:
+        name: chronyd
+        state: started
+        enabled: true
+
+    - name: "CIS 6 | NTP | Verificar configuracion de servidor NTP"
+      lineinfile:
+        path: /etc/chrony.conf
+        regexp: '^pool'
+        line: 'pool time.google.com iburst'
+        state: present
+        backup: yes
+      notify: Reiniciar Chronyd
+
+  handlers:
+
+    - name: Reiniciar SSH
+      service:
+        name: sshd
+        state: restarted
+
+    - name: Reiniciar Auditd
+      service:
+        name: auditd
+        state: restarted
+
+    - name: Reiniciar Chronyd
+      service:
+        name: chronyd
+        state: restarted
