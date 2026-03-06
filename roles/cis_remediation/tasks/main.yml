@@ -1,7 +1,0 @@
----
-# Tareas principales del rol cis_remediation
-
-- name: Aplicar remediaciones CIS nivel {{ cis_remediation_level }}
-  ansible.builtin.debug:
-    msg: "Aplicando remediaciones CIS nivel {{ cis_remediation_level }} en {{ inventory_hostname }}"
-  # TODO: Agregar tareas de remediación CIS reales aquí

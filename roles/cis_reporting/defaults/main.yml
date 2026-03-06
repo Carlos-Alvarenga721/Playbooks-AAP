@@ -1,6 +1,0 @@
----
-# Defaults para el rol cis_reporting
-
-cis_report_output_dir: /tmp/cis_reports
-cis_report_email_enabled: false
-cis_report_email_to: "admin@example.com"

@@ -1,6 +1,0 @@
----
-# Defaults para el rol cis_audit
-
-cis_audit_level: 1          # Nivel CIS: 1 (básico) o 2 (completo)
-cis_audit_output_dir: /tmp/cis_audit_results
-cis_audit_report_name: cis_audit_report

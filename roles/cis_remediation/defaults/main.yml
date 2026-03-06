@@ -1,5 +1,0 @@
----
-# Defaults para el rol cis_remediation
-
-cis_remediation_level: 1    # Nivel CIS a remediar
-cis_remediation_dry_run: false  # true = solo muestra cambios sin aplicar
