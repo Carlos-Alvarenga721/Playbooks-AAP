@@ -1,0 +1,78 @@
+---
+- name: CIS Level 1 - Auditoria de Cumplimiento
+  hosts: all
+  become: true
+  gather_facts: true
+  vars:
+    audit_results: []
+
+  tasks:
+
+    - name: "CIS 1 | SSH | Verificar que root login esta deshabilitado"
+      command: grep -i "^PermitRootLogin" /etc/ssh/sshd_config
+      register: ssh_root
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 1 | SSH | Registrar resultado"
+      set_fact:
+        audit_results: "{{ audit_results + [{'control': 'SSH - PermitRootLogin', 'status': 'PASS' if 'no' in ssh_root.stdout | lower else 'FAIL', 'detalle': ssh_root.stdout}] }}"
+
+    - name: "CIS 2 | SSH | Verificar autenticacion por password deshabilitada"
+      command: grep -i "^PasswordAuthentication" /etc/ssh/sshd_config
+      register: ssh_pass
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 2 | SSH | Registrar resultado"
+      set_fact:
+        audit_results: "{{ audit_results + [{'control': 'SSH - PasswordAuthentication', 'status': 'PASS' if 'no' in ssh_pass.stdout | lower else 'FAIL', 'detalle': ssh_pass.stdout}] }}"
+
+    - name: "CIS 3 | Firewall | Verificar que firewalld esta activo"
+      command: systemctl is-active firewalld
+      register: firewalld_status
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 3 | Firewall | Registrar resultado"
+      set_fact:
+        audit_results: "{{ audit_results + [{'control': 'Firewalld - Servicio activo', 'status': 'PASS' if firewalld_status.stdout == 'active' else 'FAIL', 'detalle': firewalld_status.stdout}] }}"
+
+    - name: "CIS 4 | Auditd | Verificar que auditd esta activo"
+      command: systemctl is-active auditd
+      register: auditd_status
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 4 | Auditd | Registrar resultado"
+      set_fact:
+        audit_results: "{{ audit_results + [{'control': 'Auditd - Servicio activo', 'status': 'PASS' if auditd_status.stdout == 'active' else 'FAIL', 'detalle': auditd_status.stdout}] }}"
+
+    - name: "CIS 5 | Rsyslog | Verificar que rsyslog esta activo"
+      command: systemctl is-active rsyslog
+      register: rsyslog_status
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 5 | Rsyslog | Registrar resultado"
+      set_fact:
+        audit_results: "{{ audit_results + [{'control': 'Rsyslog - Servicio activo', 'status': 'PASS' if rsyslog_status.stdout == 'active' else 'FAIL', 'detalle': rsyslog_status.stdout}] }}"
+
+    - name: "CIS 6 | NTP | Verificar que chronyd esta activo"
+      command: systemctl is-active chronyd
+      register: chronyd_status
+      changed_when: false
+      failed_when: false
+
+    - name: "CIS 6 | NTP | Registrar resultado"
+      set_fact:
+        audit_results: "{{ audit_results + [{'control': 'Chronyd - Servicio activo', 'status': 'PASS' if chronyd_status.stdout == 'active' else 'FAIL', 'detalle': chronyd_status.stdout}] }}"
+
+    - name: "Guardar resultados de auditoria para uso posterior"
+      set_fact:
+        cis_audit_results: "{{ audit_results }}"
+
+    - name: "Mostrar resumen de auditoria"
+      debug:
+        msg: "{{ item.control }} --> {{ item.status }} | {{ item.detalle }}"
+      loop: "{{ audit_results }}"
