@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte CIS Level 1</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+    h1 { color: #cc0000; }
+    h2 { color: #555; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th { background-color: #cc0000; color: white; padding: 10px; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #eee; }
+    .pass { color: green; font-weight: bold; }
+    .fail { color: red; font-weight: bold; }
+    .footer { margin-top: 40px; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+
+  <h1>Reporte de Cumplimiento CIS Level 1</h1>
+
+  <h2>Informacion del Servidor</h2>
+  <table>
+    <tr><th>Campo</th><th>Valor</th></tr>
+    <tr><td>Hostname</td><td>{{ inventory_hostname }}</td></tr>
+    <tr><td>Sistema Operativo</td><td>{{ ansible_distribution }} {{ ansible_distribution_version }}</td></tr>
+    <tr><td>IP</td><td>{{ ansible_default_ipv4.address }}</td></tr>
+    <tr><td>Fecha de Reporte</td><td>{{ ansible_date_time.date }}</td></tr>
+    <tr><td>Hora de Reporte</td><td>{{ ansible_date_time.time }}</td></tr>
+  </table>
+
+  <h2>Resultados de la Automatizacion</h2>
+  <table>
+    <tr>
+      <th>Control</th>
+      <th>Estado</th>
+      <th>Detalle</th>
+    </tr>
+    {% for item in cis_audit_results | default([]) %}
+    <tr>
+      <td>{{ item.control }}</td>
+      <td class="{{ 'pass' if item.status == 'PASS' else 'fail' }}">{{ item.status }}</td>
+      <td>{{ item.detalle }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Resumen</h2>
+  <table>
+    <tr>
+      <th>Total Controles</th>
+      <th>PASS</th>
+      <th>FAIL</th>
+    </tr>
+    <tr>
+      <td>{{ cis_audit_results | default([]) | length }}</td>
+      <td class="pass">{{ cis_audit_results | default([]) | selectattr('status', 'equalto', 'PASS') | list | length }}</td>
+      <td class="fail">{{ cis_audit_results | default([]) | selectattr('status', 'equalto', 'FAIL') | list | length }}</td>
+    </tr>
+  </table>
+
+  <div class="footer">
+    <p>Reporte generado automaticamente por Ansible Automation Platform | POC Datum</p>
+  </div>
+
+</body>
+</html>

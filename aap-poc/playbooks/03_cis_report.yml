@@ -1,0 +1,39 @@
+---
+- name: CIS Level 1 - Generacion de Reporte y Notificacion
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    smtp_user: "datumdemo00@gmail.com"
+    smtp_password: "{{ vault_smtp_password }}"
+    report_recipient: "datumdemo00@gmail.com"
+    report_path: "/tmp/cis_report_{{ inventory_hostname }}_{{ ansible_date_time.date }}.html"
+
+  tasks:
+
+    - name: "Reporte | Generar reporte HTML"
+      template:
+        src: ../roles/cis_hardening/templates/cis_report.html.j2
+        dest: "{{ report_path }}"
+        mode: '0644'
+
+    - name: "Reporte | Leer contenido del reporte generado"
+      slurp:
+        src: "{{ report_path }}"
+      register: report_content
+
+    - name: "Reporte | Enviar reporte por correo"
+      community.general.mail:
+        host: "{{ smtp_host }}"
+        port: "{{ smtp_port }}"
+        username: "{{ smtp_user }}"
+        password: "{{ smtp_password }}"
+        to: "{{ report_recipient }}"
+        subject: "Reporte CIS Level 1 - {{ inventory_hostname }} - {{ ansible_date_time.date }}"
+        subtype: html
+        body: "{{ report_content.content | b64decode }}"
+        secure: starttls
+      delegate_to: localhost
