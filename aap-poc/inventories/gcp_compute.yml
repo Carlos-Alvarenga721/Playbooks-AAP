@@ -1,0 +1,16 @@
+plugin: google.cloud.gcp_compute
+projects:
+  - ansible-poc-datum-489316
+regions:
+  - us-central1
+filters:
+  - labels.env = poc
+compose:
+  ansible_host: networkInterfaces[0].networkIP
+keyed_groups:
+  - key: labels.role
+    prefix: role
+    separator: "_"
+groups:
+  linux_servers: "'rhel' in name or 'web' in name"
+  windows_servers: "'windows' in name or 'dc' in name"
