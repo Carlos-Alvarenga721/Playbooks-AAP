@@ -44,7 +44,7 @@ INFRAESTRUCTURA GCP — 4 SERVIDORES:
 │ #4 - Portal Self-Service   → Ubuntu 22.04 LTS                  │
 │      Servicios: Interfaz web que consume API REST de AAP       │
 │      Instancia: e2-small | 2 vCPU | 2 GB RAM | 30 GB          │
-│      IP: 10.10.0.40                                            │
+│      IP: 10.10.0.4                                            │
 └─────────────────────────────────────────────────────────────────┘
 
 Red interna: 10.10.0.0/24 (VPC: vpc-aap-poc, us-central1)
