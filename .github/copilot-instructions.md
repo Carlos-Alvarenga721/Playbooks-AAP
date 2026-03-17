@@ -33,13 +33,13 @@ INFRAESTRUCTURA GCP — 4 SERVIDORES:
 │ #2 - Web Server            → RHEL 9                            │
 │      Servicios: Web + App + DB (consolidado en una sola VM)    │
 │      Instancia: e2-standard-2 | 2 vCPU | 4 GB RAM | 30 GB     │
-│      IP: 10.10.0.20                                            │
+│      IP: 10.10.0.2                                            │
 │      Nota: Único servidor Linux target para auditorías CIS     │
 ├─────────────────────────────────────────────────────────────────┤
 │ #3 - Windows DC            → Windows Server 2022               │
 │      Servicios: Active Directory / Domain Controller           │
 │      Instancia: e2-standard-2 | 2 vCPU | 8 GB RAM | 80 GB     │
-│      IP: 10.10.0.30                                            │
+│      IP: 10.10.0.3                                            │
 ├─────────────────────────────────────────────────────────────────┤
 │ #4 - Portal Self-Service   → Ubuntu 22.04 LTS                  │
 │      Servicios: Interfaz web que consume API REST de AAP       │
@@ -63,10 +63,10 @@ CASOS DE USO:
 2. Remediación automática de controles CIS fallidos
 3. Gestión de empleados: altas/bajas/roles/reset contraseña en Windows AD + Linux
 4. Aprovisionamiento y destrucción automática de entornos efímeros en GCE
-5. Reportes HTML con notificaciones por email (SMTP) — aplica al caso de uso CIS Benchmark
+5. Reportes HTML con notificaciones por email (SMTP) — aplica unicamene al caso de uso CIS Benchmark
 6. Portal Self-Service con interfaz web que consume API REST de AAP
 
-PLAYBOOKS:
+PLAYBOOKS PAR LA AUDITORIA CIS LEVEL1:
 - 01_cis_audit_scan.yml
 - 02_cis_remediation.yml
 - 03_generate_report.yml
@@ -109,7 +109,7 @@ FIREWALL:
 
 VMs COMPLETADAS:
 - aap-controller  | RHEL 9 | e2-standard-4 | IP: 10.10.0.10 | 80 GB SSD
-- web-server      | RHEL 9 | e2-standard-2 | IP: 10.10.0.20 | 30 GB SSD
+- web-server      | RHEL 9 | e2-standard-2 | IP: 10.10.0.2 | 30 GB SSD
 
 ⚠️  Las VMs #3 (Windows DC) y #4 (Portal Self-Service) AÚN NO HAN SIDO CREADAS.
 
