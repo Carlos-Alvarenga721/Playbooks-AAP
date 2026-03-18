@@ -4,6 +4,9 @@
   become: true
   gather_facts: true
 
+  vars_files:
+    - ../vars/vault.yml
+
   vars:
     smtp_host: "smtp.gmail.com"
     smtp_port: 587
