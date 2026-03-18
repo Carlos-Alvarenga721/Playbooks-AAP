@@ -15,13 +15,13 @@
   tasks:
 
     - name: "Reporte | Generar reporte HTML"
-      template:
-        src: roles/cis_hardening/templates/cis_report.html.j2
+      ansible.builtin.template:
+        src: ../roles/cis_hardening/templates/cis_report.html.j2
         dest: "{{ report_path }}"
         mode: '0644'
 
     - name: "Reporte | Leer contenido del reporte generado"
-      slurp:
+      ansible.builtin.slurp:
         src: "{{ report_path }}"
       register: report_content
 
