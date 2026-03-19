@@ -76,3 +76,10 @@
       debug:
         msg: "{{ item.control }} --> {{ item.status }} | {{ item.detalle }}"
       loop: "{{ audit_results }}"
+
+    # ─── NUEVO: publicar resultados como artifact del workflow ───────────────
+    - name: "Publicar resultados para el siguiente nodo del workflow"
+      ansible.builtin.set_stats:
+        data:
+          cis_audit_results: "{{ cis_audit_results }}"
+        aggregate: false
