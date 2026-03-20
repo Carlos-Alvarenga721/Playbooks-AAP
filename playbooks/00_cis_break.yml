@@ -29,9 +29,13 @@
         enabled: false
 
     - name: "BREAK 4 | Auditd | Detener y deshabilitar auditd"
-      ansible.builtin.service:
+      ansible.builtin.command:
+        cmd: service auditd stop
+      changed_when: true
+
+    - name: "BREAK 4 | Auditd | Deshabilitar auditd en arranque"
+      ansible.builtin.systemd:
         name: auditd
-        state: stopped
         enabled: false
 
   handlers:
