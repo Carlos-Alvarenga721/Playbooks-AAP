@@ -1,0 +1,42 @@
+---
+- name: CIS Break - Revertir servidor a estado inseguro (Demo)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+
+    - name: "BREAK 1 | SSH | Habilitar acceso root por SSH"
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin yes'
+        state: present
+      notify: Reiniciar SSH
+
+    - name: "BREAK 2 | SSH | Habilitar autenticacion por password"
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication yes'
+        state: present
+      notify: Reiniciar SSH
+
+    - name: "BREAK 3 | Firewall | Detener y deshabilitar firewalld"
+      ansible.builtin.service:
+        name: firewalld
+        state: stopped
+        enabled: false
+
+    - name: "BREAK 4 | Auditd | Detener y deshabilitar auditd"
+      ansible.builtin.service:
+        name: auditd
+        state: stopped
+        enabled: false
+
+  handlers:
+
+    - name: Reiniciar SSH
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
