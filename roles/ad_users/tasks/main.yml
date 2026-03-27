@@ -1,33 +1,20 @@
 ---
-- name: Validar accion AD soportada
-  ansible.builtin.assert:
-    that:
-      - ad_action in ['create', 'update', 'delete']
-    fail_msg: "ad_action debe ser create, update o delete."
-
-- name: Validar identidad AD requerida
-  ansible.builtin.assert:
-    that:
-      - ad_identity | length > 0
-    fail_msg: "ad_identity es obligatorio."
-
-- name: Validar password AD para create
-  ansible.builtin.assert:
-    that:
-      - ad_password | length > 0
-    fail_msg: "ad_password es obligatorio para create."
-  when: ad_action == 'create'
-
-- name: Gestionar usuario en Active Directory
+- name: "AD | Crear usuario en Active Directory"
   microsoft.ad.user:
-    identity: "{{ ad_identity }}"
-    firstname: "{{ ad_firstname | default(omit) }}"
-    surname: "{{ ad_surname | default(omit) }}"
-    password: "{{ ad_password if ad_action == 'create' else omit }}"
-    upn: "{{ ad_identity }}@{{ ad_upn_suffix }}"
-    path: "{{ ad_path }}"
-    description: "{{ ad_description }}"
-    groups: "{{ ad_groups if ad_groups | length > 0 else omit }}"
-    enabled: "{{ ad_enabled }}"
-    state: "{{ ad_state_map[ad_action] }}"
+    name: "{{ employee_full_name }}"
+    sam_account_name: "{{ employee_username }}"
+    upn: "{{ employee_username }}@{{ ad_domain }}"
+    password: "{{ employee_password }}"
+    path: "{{ ad_ou }}"
+    state: present
+    enabled: true
+    update_password: on_create
+  register: ad_user_result
 
+- name: "AD | Agregar usuario al grupo correspondiente"
+  microsoft.ad.group:
+    name: "{{ employee_role }}"
+    members:
+      add:
+        - "{{ employee_username }}"
+    state: present

@@ -2,3 +2,6 @@
 collections:
   - name: community.general
     version: ">=7.0.0"
+
+  - name: microsoft.ad
+    version: ">=1.4.0"

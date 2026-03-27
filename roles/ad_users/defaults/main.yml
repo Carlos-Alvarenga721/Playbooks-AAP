@@ -1,16 +1,3 @@
 ---
-ad_action: "create"
-ad_identity: ""
-ad_firstname: ""
-ad_surname: ""
-ad_password: ""
-ad_path: "CN=Users,DC=example,DC=local"
-ad_groups: []
-ad_enabled: true
-ad_upn_suffix: "example.local"
-ad_description: "Managed by Ansible"
-ad_state_map:
-  create: "present"
-  update: "present"
-  delete: "absent"
-
+ad_ou: "CN=Users,DC=datum,DC=local"
+ad_domain: "datum.local"
