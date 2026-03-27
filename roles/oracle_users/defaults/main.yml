@@ -1,0 +1,19 @@
+---
+oracle_action: "create"
+oracle_username: ""
+oracle_password: ""
+oracle_password_update: "always"
+oracle_user_state:
+  create: "present"
+  update: "present"
+  delete: "absent"
+oracle_profile: "DEFAULT"
+oracle_default_tablespace: "USERS"
+oracle_temp_tablespace: "TEMP"
+oracle_grants: []
+oracle_append_grants: true
+oracle_hostname: ""
+oracle_port: 1521
+oracle_service_name: ""
+oracle_mode: "normal"
+

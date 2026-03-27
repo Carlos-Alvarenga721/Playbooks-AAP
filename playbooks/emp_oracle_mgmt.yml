@@ -1,0 +1,9 @@
+---
+- name: EMP Oracle Management
+  hosts: rhel-target
+  become: true
+  gather_facts: false
+
+  roles:
+    - role: oracle_users
+

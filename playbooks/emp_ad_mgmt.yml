@@ -1,0 +1,8 @@
+---
+- name: EMP Active Directory Management
+  hosts: windows-dc
+  gather_facts: false
+
+  roles:
+    - role: ad_users
+
