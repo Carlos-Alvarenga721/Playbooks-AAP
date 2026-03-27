@@ -1,21 +1,24 @@
-## Flujo de Demo — CIS Level 1
+Listo ya ejecute el Workflow y funciono perfectamente.
 
-Cuando el usuario accede al portal, el sistema ejecuta automáticamente
-en background un playbook que deja el servidor en estado inseguro,
-simulando un entorno real con vulnerabilidades.
+Resultados de la Automatizacion
+Control --- Estado --- Detalle
+SSH - PermitRootLogin --- PASSPermitRootLogin no
+SSH - PasswordAuthentication --- PASS --- PasswordAuthentication no
+Firewalld - Servicio activo --- PASS --- active
+Auditd - Servicio activo --- PASS --- active
+Rsyslog - Servicio activo --- PASS --- active
+Chronyd - Servicio activo --- PASS --- active
 
-El usuario entonces ejecuta el workflow que hicimos antes y desde el portal se ejecutan:
+Resumen
+Total Controles  ---   PASS --- FAIL
+6 -- 6 -- 0
 
-1. **Auditoría CIS** → detecta y lista todos los controles fallidos
-2. **Remediación CIS** → corrige automáticamente cada vulnerabilidad
-3. **Reporte** → genera y envía por email el comparativo antes/después hacia el correo del usuario que se logueo dentro del portal.
+esto me dio de resultados, todo bien, entonces todo bien no?
 
-El resultado es una demostración en vivo donde el evaluador ve
-el problema real y la solución automatizada en menos de 5 minutos.
+La forma de trabajo que debo seguir son las siguientes:
 
-para la parte del break playbook yo ya defini que se ejecutara en segundo plano, pero todo esto tiene que ir de la mano con la autenticacion del usuario dentro del portal, porque el flujo que tengo pensando es que el portal o pagina web en palabras mas simples, tiene que tener un login (el cual pienso hacerlo con Google, poder acceder a la pagina web por medio del correo electronico de google) en el que el usuario luego de ingresar sus  crendenciales y poder acceder correctamente. Le mostrara la interfaz del home donde tenga los botones o casos de uso (serian el CIS level#1 y la gestion de usuarios con Active Directory y BD en el RHEL target que tambien es importante aclarar, este servidor se vera involucrado en ambas tareas de automatizacion para mi POC).
+1) Gestión de usuarios AD + RHEL → es el mayor riesgo técnico, atacarlo primero
 
- Ahora mi duda actual es esta:
-Yo entonces deberia de empezar a realizar que exactamente? la pagina web? el logueo con Google para que esa parte este lista y luego ver como hago para que al ingrear las credenciales el usuario, este break playbook se ejecute en segundo plano ya con toda la logica del ingreso de usuario.
+2) Portal web + login con Google → una vez que ambas automatizaciones funcionen desde AAP, el portal solo las expone
 
-o deberia de primero hacer el break  playbook para ver si funciona, y ya despues hago el logueo y autenticacion y empiezo a ponerle mano al codigo de la pagina web o que procede? esa es mi duda mas que todo
+3) Integración break playbook + login → último detalle, se conecta solo cuando el portal ya existe
