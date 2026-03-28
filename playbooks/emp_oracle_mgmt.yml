@@ -1,9 +1,8 @@
 ---
 - name: EMP Oracle Management
-  hosts: rhel-target
+  hosts: linux_servers
   become: true
   gather_facts: false
 
   roles:
     - role: oracle_users
-

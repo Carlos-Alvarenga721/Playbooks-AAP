@@ -1,43 +1,23 @@
 ---
-- name: Validar accion Oracle soportada
-  ansible.builtin.assert:
-    that:
-      - oracle_action in ['create', 'update', 'delete']
-    fail_msg: "oracle_action debe ser create, update o delete."
+- name: "Oracle | Crear usuario en FREEPDB1"
+  ansible.builtin.shell: |
+    {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
+    CREATE USER {{ employee_username }} IDENTIFIED BY "{{ employee_password }}";
+    GRANT CREATE SESSION TO {{ employee_username }};
+    EXIT;
+    EOF
+  register: oracle_create_result
+  changed_when: "'User created' in oracle_create_result.stdout"
+  failed_when:
+    - oracle_create_result.rc != 0
+    - "'ORA-01920' not in oracle_create_result.stdout"
 
-- name: Validar usuario Oracle requerido
-  ansible.builtin.assert:
-    that:
-      - oracle_username | length > 0
-    fail_msg: "oracle_username es obligatorio."
-
-- name: Validar conexion Oracle requerida
-  ansible.builtin.assert:
-    that:
-      - oracle_hostname | length > 0
-      - oracle_service_name | length > 0
-    fail_msg: "oracle_hostname y oracle_service_name son obligatorios."
-
-- name: Validar password Oracle para create/update
-  ansible.builtin.assert:
-    that:
-      - oracle_password | length > 0
-    fail_msg: "oracle_password es obligatorio para create o update."
-  when: oracle_action in ['create', 'update']
-
-- name: Gestionar usuario Oracle
-  community.general.oracle_user:
-    hostname: "{{ oracle_hostname }}"
-    port: "{{ oracle_port }}"
-    service_name: "{{ oracle_service_name }}"
-    mode: "{{ oracle_mode }}"
-    schema: "{{ oracle_username }}"
-    schema_password: "{{ oracle_password if oracle_action in ['create', 'update'] else omit }}"
-    profile: "{{ oracle_profile }}"
-    default_tablespace: "{{ oracle_default_tablespace }}"
-    temporary_tablespace: "{{ oracle_temp_tablespace }}"
-    grants: "{{ oracle_grants }}"
-    append_grants: "{{ oracle_append_grants }}"
-    update_password: "{{ oracle_password_update }}"
-    state: "{{ oracle_user_state[oracle_action] }}"
-
+- name: "Oracle | Asignar rol al usuario"
+  ansible.builtin.shell: |
+    {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
+    GRANT {{ employee_role }} TO {{ employee_username }};
+    EXIT;
+    EOF
+  register: oracle_grant_result
+  changed_when: "'Grant succeeded' in oracle_grant_result.stdout"
+  failed_when: oracle_grant_result.rc != 0
