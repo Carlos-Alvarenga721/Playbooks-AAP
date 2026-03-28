@@ -1,20 +1,12 @@
 ---
 - name: "AD | Crear usuario en Active Directory"
-  microsoft.ad.user:
-    name: "{{ employee_full_name }}"
-    sam_account_name: "{{ employee_username }}"
-    upn: "{{ employee_username }}@{{ ad_domain }}"
+  community.windows.win_domain_user:
+    name: "{{ employee_username }}"
+    firstname: "{{ employee_full_name.split()[0] }}"
+    surname: "{{ employee_full_name.split()[1] }}"
     password: "{{ employee_password }}"
-    path: "{{ ad_ou }}"
     state: present
     enabled: true
+    groups:
+      - "{{ employee_role }}"
     update_password: on_create
-  register: ad_user_result
-
-- name: "AD | Agregar usuario al grupo correspondiente"
-  microsoft.ad.group:
-    name: "{{ employee_role }}"
-    members:
-      add:
-        - "{{ employee_username }}"
-    state: present
