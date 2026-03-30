@@ -46,3 +46,35 @@
   changed_when: "'User altered' in oracle_lock_result.stdout"
   failed_when: oracle_lock_result.rc != 0
   when: employee_action == "baja"
+
+- name: "Oracle | Cambio de rol — revocar rol anterior"
+  ansible.builtin.shell: |
+    {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
+    REVOKE {{ employee_role_anterior }} FROM {{ employee_username }};
+    EXIT;
+    EOF
+  environment:
+    ORACLE_HOME: "{{ oracle_home }}"
+    ORACLE_SID: "FREE"
+    PATH: "{{ oracle_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  register: oracle_revoke_result
+  changed_when: "'Revoke succeeded' in oracle_revoke_result.stdout"
+  failed_when:
+    - oracle_revoke_result.rc != 0
+    - "'ORA-01951' not in oracle_revoke_result.stdout"
+  when: employee_action == "cambio_rol"
+
+- name: "Oracle | Cambio de rol — asignar rol nuevo"
+  ansible.builtin.shell: |
+    {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
+    GRANT {{ employee_role }} TO {{ employee_username }};
+    EXIT;
+    EOF
+  environment:
+    ORACLE_HOME: "{{ oracle_home }}"
+    ORACLE_SID: "FREE"
+    PATH: "{{ oracle_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  register: oracle_newrole_result
+  changed_when: "'Grant succeeded' in oracle_newrole_result.stdout"
+  failed_when: oracle_newrole_result.rc != 0
+  when: employee_action == "cambio_rol"
