@@ -10,3 +10,21 @@
     groups:
       - "{{ employee_role }}"
     update_password: on_create
+  when: employee_action == "alta"
+
+- name: "AD | Deshabilitar usuario en Active Directory"
+  community.windows.win_domain_user:
+    name: "{{ employee_username }}"
+    state: present
+    enabled: false
+  when: employee_action == "baja"
+
+- name: "AD | Reset de contraseña en Active Directory"
+  community.windows.win_domain_user:
+    name: "{{ employee_username }}"
+    password: "{{ employee_password }}"
+    state: present
+    enabled: true
+    password_expired: true
+    update_password: always
+  when: employee_action == "reset"
