@@ -1,15 +1,4 @@
 ---
-- name: "DEBUG | Verificar Python y winrm"
-  ansible.builtin.shell: |
-    python3 -c "import winrm; print(winrm.__file__)" 2>&1 || echo "winrm no encontrado"
-    python3 --version
-    whoami
-  register: debug_output
-
-- name: "DEBUG | Mostrar resultado"
-  ansible.builtin.debug:
-    msg: "{{ debug_output.stdout_lines }}"
-
 - name: "AD | Crear usuario en Active Directory"
   community.windows.win_domain_user:
     name: "{{ employee_username }}"
