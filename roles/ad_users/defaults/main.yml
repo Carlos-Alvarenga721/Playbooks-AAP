@@ -1,3 +1,7 @@
 ---
 ad_ou: "CN=Users,DC=datum,DC=local"
 ad_domain: "datum.local"
+employee_full_name: "Default User"
+employee_password: ""
+employee_role: "Domain Users"
+employee_action: "alta"
