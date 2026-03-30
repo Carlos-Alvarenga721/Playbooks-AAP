@@ -6,6 +6,10 @@
     GRANT CREATE SESSION TO {{ employee_username }};
     EXIT;
     EOF
+  environment:
+    ORACLE_HOME: "{{ oracle_home }}"
+    ORACLE_SID: "FREE"
+    PATH: "{{ oracle_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   register: oracle_create_result
   changed_when: "'User created' in oracle_create_result.stdout"
   failed_when:
@@ -18,6 +22,10 @@
     GRANT {{ employee_role }} TO {{ employee_username }};
     EXIT;
     EOF
+  environment:
+    ORACLE_HOME: "{{ oracle_home }}"
+    ORACLE_SID: "FREE"
+    PATH: "{{ oracle_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   register: oracle_grant_result
   changed_when: "'Grant succeeded' in oracle_grant_result.stdout"
   failed_when: oracle_grant_result.rc != 0
