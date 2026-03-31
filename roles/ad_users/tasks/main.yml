@@ -8,7 +8,7 @@
     state: present
     enabled: true
     groups:
-      - "{{ employee_role }}"
+      - "Domain Users"
     update_password: on_create
   when: employee_action == "alta"
 
