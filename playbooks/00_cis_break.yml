@@ -1,6 +1,6 @@
 ---
 - name: CIS Break - Revertir servidor a estado inseguro (Demo)
-  hosts: all
+  hosts: web-server
   become: true
   gather_facts: false
 

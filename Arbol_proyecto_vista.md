@@ -1,31 +1,45 @@
-Playbooks-AAP/
+AAP PLAYBOOKS/
 │
-├── playbooks/
-│   ├── 00_cis_break.yml          ✅ ya existe
-│   ├── 01_cis_audit.yml          ✅ ya existe
-│   ├── 02_cis_remediation.yml    ✅ ya existe
-│   ├── 03_cis_report.yml         ✅ ya existe
-│   │
-│   ├── emp_oracle_mgmt.yml       ← NUEVO (target: rhel-target)
-│   └── emp_ad_mgmt.yml           ← NUEVO (target: windows-dc)
-│
-├── roles/
-│   ├── cis_hardening/            ✅ ya existe
-│   │
-│   ├── oracle_users/             ← NUEVO
-│   │   ├── tasks/
-│   │   │   └── main.yml          ← lógica Oracle por action
-│   │   └── defaults/
-│   │       └── main.yml          ← defaults seguros Oracle
-│   │
-│   └── ad_users/                 ← NUEVO
-│       ├── tasks/
-│       │   └── main.yml          ← lógica AD por action
-│       └── defaults/
-│           └── main.yml          ← defaults seguros AD
+├── .github/
+├── .vscode/
+├── collections/
 │
 ├── inventories/
-│   └── hosts.yml                 ← agregar rhel-target aquí
+│   ├── gcp_compute.yml
+│   └── hosts.yml
 │
-└── vars/
-    └── vault.yml                 ✅ ya existe (agregar creds Oracle)
+├── playbooks/
+│   ├── 00_cis_break.yml
+│   ├── 01_cis_audit.yml
+│   ├── 02_cis_remediation.yml
+│   ├── 03_cis_report.yml
+│   ├── emp_ad_mgmt.yml
+│   └── emp_oracle_mgmt.yml
+│
+├── roles/
+│   ├── ad_users/
+│   │   ├── defaults/
+│   │   │   └── main.yml
+│   │   └── tasks/
+│   │       └── main.yml
+│   │
+│   ├── cis_hardening/
+│   │   ├── tasks/
+│   │   │   └── main.yml
+│   │   └── templates/
+│   │       └── cis_report.html.j2
+│   │
+│   └── oracle_users/
+│       ├── defaults/
+│       │   └── main.yml
+│       └── tasks/
+│           └── main.yml
+│
+├── vars/
+│   └── vault.yml
+│
+├── ansible.cfg
+├── Arbol_proyecto_vista.md
+├── Estructura Correo HTML.md
+├── Flujo de CIS level1.md
+└── RESUMEN_CAMBIANTE.md

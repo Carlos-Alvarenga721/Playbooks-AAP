@@ -1,6 +1,6 @@
 ---
 - name: CIS Level 1 - Generacion de Reporte y Notificacion
-  hosts: all
+  hosts: web-server
   become: true
   gather_facts: true
 
