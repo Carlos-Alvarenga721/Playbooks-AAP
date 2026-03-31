@@ -2,8 +2,8 @@
 - name: "Oracle | Crear usuario en FREEPDB1"
   ansible.builtin.shell: |
     {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
-    CREATE USER {{ employee_username }} IDENTIFIED BY "{{ employee_password }}";
-    GRANT CREATE SESSION TO {{ employee_username }};
+    CREATE USER {{ employee_oracle_username }} IDENTIFIED BY "{{ employee_password }}";
+    GRANT CREATE SESSION TO {{ employee_oracle_username }};
     EXIT;
     EOF
   environment:
@@ -20,7 +20,7 @@
 - name: "Oracle | Asignar rol al usuario"
   ansible.builtin.shell: |
     {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
-    GRANT {{ employee_role }} TO {{ employee_username }};
+    GRANT {{ employee_role }} TO {{ employee_oracle_username }};
     EXIT;
     EOF
   environment:
@@ -35,7 +35,7 @@
 - name: "Oracle | Bloquear usuario (baja)"
   ansible.builtin.shell: |
     {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
-    ALTER USER {{ employee_username }} ACCOUNT LOCK;
+    ALTER USER {{ employee_oracle_username }} ACCOUNT LOCK;
     EXIT;
     EOF
   environment:
@@ -50,7 +50,7 @@
 - name: "Oracle | Cambio de rol — revocar rol anterior"
   ansible.builtin.shell: |
     {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
-    REVOKE {{ employee_role_anterior }} FROM {{ employee_username }};
+    REVOKE {{ employee_role_anterior }} FROM {{ employee_oracle_username }};
     EXIT;
     EOF
   environment:
@@ -67,7 +67,7 @@
 - name: "Oracle | Cambio de rol — asignar rol nuevo"
   ansible.builtin.shell: |
     {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
-    GRANT {{ employee_role }} TO {{ employee_username }};
+    GRANT {{ employee_role }} TO {{ employee_oracle_username }};
     EXIT;
     EOF
   environment:
