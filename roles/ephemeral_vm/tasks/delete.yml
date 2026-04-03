@@ -8,6 +8,7 @@
 
 - name: Eliminar VM en GCP
   google.cloud.gcp_compute_instance:
+    auth_kind: machineaccount
     name: "{{ instance_name }}"
     project: "{{ gcp_project_id }}"
     zone: "{{ gcp_zone }}"
