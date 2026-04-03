@@ -32,6 +32,8 @@
     network_interfaces:
       - network:
           selfLink: "projects/{{ gcp_project_id }}/global/networks/{{ gcp_network }}"
+        subnetwork:
+          selfLink: "projects/{{ gcp_project_id }}/regions/{{ gcp_region }}/subnetworks/{{ gcp_subnetwork }}"
         access_configs:
           - name: External NAT
             type: ONE_TO_ONE_NAT

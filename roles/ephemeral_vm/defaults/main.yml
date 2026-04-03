@@ -1,7 +1,9 @@
 ---
 gcp_project_id: ansible-poc-datum-489316
 gcp_zone: us-central1-a
+gcp_region: us-central1
 gcp_network: vpc-aap-poc
+gcp_subnetwork: subnet-aap-controller
 
 machine_family: e2
 image_version: rhel-9
