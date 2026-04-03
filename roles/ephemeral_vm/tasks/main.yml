@@ -1,0 +1,14 @@
+---
+- name: Validar accion soportada
+  ansible.builtin.assert:
+    that:
+      - ephemeral_action in ['create', 'delete']
+    fail_msg: "ephemeral_action debe ser create o delete"
+
+- name: Incluir flujo create
+  ansible.builtin.include_tasks: create.yml
+  when: ephemeral_action == 'create'
+
+- name: Incluir flujo delete
+  ansible.builtin.include_tasks: delete.yml
+  when: ephemeral_action == 'delete'

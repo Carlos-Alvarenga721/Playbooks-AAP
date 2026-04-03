@@ -1,0 +1,47 @@
+---
+- name: Validar parametros obligatorios
+  ansible.builtin.assert:
+    that:
+      - instance_name is defined
+      - instance_name | length > 0
+      - machine_family in machine_type_map
+      - image_version in image_family_map
+      - (disk_size_gb | int) >= 20
+      - (ttl_hours | int) >= 1
+    fail_msg: "Parametros invalidos para la creacion de VM efimera"
+
+- name: Resolver machine type e imagen
+  ansible.builtin.set_fact:
+    machine_type: "{{ machine_type_map[machine_family] }}"
+    source_image: "{{ image_family_map[image_version] }}"
+    expires_at_epoch: "{{ lookup('pipe', 'date -u -d \"+' ~ (ttl_hours | string) ~ ' hour\" +%s') }}"
+
+- name: Crear VM en GCP
+  google.cloud.gcp_compute_instance:
+    name: "{{ instance_name }}"
+    project: "{{ gcp_project_id }}"
+    zone: "{{ gcp_zone }}"
+    machine_type: "zones/{{ gcp_zone }}/machineTypes/{{ machine_type }}"
+    disks:
+      - auto_delete: true
+        boot: true
+        initialize_params:
+          source_image: "{{ source_image }}"
+          disk_size_gb: "{{ disk_size_gb | int }}"
+    network_interfaces:
+      - network:
+          selfLink: "projects/{{ gcp_project_id }}/global/networks/{{ gcp_network }}"
+        access_configs:
+          - name: External NAT
+            type: ONE_TO_ONE_NAT
+    labels:
+      managed_by: aap
+      ephemeral: "true"
+      requested_by: "{{ requested_by | lower | regex_replace('[^a-z0-9-]', '-') | truncate(40, true, '') }}"
+      ttl_hours: "{{ ttl_hours | string }}"
+    state: present
+  register: gcp_create_result
+
+- name: Mostrar resultado de creacion
+  ansible.builtin.debug:
+    var: gcp_create_result

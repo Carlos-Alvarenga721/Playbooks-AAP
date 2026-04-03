@@ -1,0 +1,8 @@
+---
+- name: Eliminar VM efimera en GCP
+  hosts: localhost
+  gather_facts: false
+  vars:
+    ephemeral_action: delete
+  roles:
+    - ephemeral_vm

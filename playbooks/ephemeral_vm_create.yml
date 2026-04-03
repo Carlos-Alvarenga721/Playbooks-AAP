@@ -1,0 +1,8 @@
+---
+- name: Crear VM efimera en GCP
+  hosts: localhost
+  gather_facts: false
+  vars:
+    ephemeral_action: create
+  roles:
+    - ephemeral_vm

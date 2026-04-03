@@ -1,0 +1,19 @@
+---
+- name: Validar nombre de instancia
+  ansible.builtin.assert:
+    that:
+      - instance_name is defined
+      - instance_name | length > 0
+    fail_msg: "instance_name es obligatorio para eliminar la VM"
+
+- name: Eliminar VM en GCP
+  google.cloud.gcp_compute_instance:
+    name: "{{ instance_name }}"
+    project: "{{ gcp_project_id }}"
+    zone: "{{ gcp_zone }}"
+    state: absent
+  register: gcp_delete_result
+
+- name: Mostrar resultado de borrado
+  ansible.builtin.debug:
+    var: gcp_delete_result

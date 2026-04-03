@@ -42,7 +42,15 @@ Flujo objetivo:
   - Dominio: `datum.local` | NetBIOS: `DATUM`
   - WinRM habilitado en HTTP/5985 con NTLM
   - Conectividad AAP → DC validada y funcional
-- **Portal Self-Service** | Ubuntu 22.04 | `10.10.0.4` | ❌ No creado aún
+- **Portal Self-Service** | Ubuntu 24.04 | `10.10.0.4` | ✅ Listo
+  - IP pública estática: `34.60.3.144`
+  - Dominio: `portal.datumselfservice.site`
+  - HTTPS funcionando con Caddy v2.11.2
+  - Backend Node.js + Express corriendo en puerto 3000
+  - Frontend Angular compilado y servido por Express
+  - pm2 configurado para persistencia del backend
+  - Login con Google OAuth funcional
+  - `.env` configurado con credenciales AAP y OAuth
 
 ### Red
 - VPC: `vpc-aap-poc` ✅
@@ -57,7 +65,7 @@ Flujo objetivo:
 - RHEL 9 en GCP usa **RHUI** → NUNCA sugerir `subscription-manager register`
 - PostgreSQL corre en el mismo host que AAP
 - Inventario dinámico GCP descartado → se usa **inventario estático**
-- El Portal Self-Service consumirá la **API REST de AAP** → NO ejecuta Ansible directamente
+- El Portal Self-Service consume la **API REST de AAP** → NO ejecuta Ansible directamente
 - El App Password de Gmail no debe ir en texto plano
 - La credencial Vault de AAP guarda la **clave de desencriptación de Ansible Vault**
 - `auditd` en RHEL 9 no acepta stop/start vía módulo service → usar `ansible.builtin.command`
@@ -98,7 +106,7 @@ Flujo objetivo:
 
 ---
 
-## Repositorio GitHub actual
+## Repositorio GitHub — Playbooks AAP
 Repo: `https://github.com/Carlos-Alvarenga721/Playbooks-AAP`
 
 ### Estructura actual del repositorio
@@ -130,184 +138,83 @@ vars/
   vault.yml                          ✅ cifrado con ansible-vault
 ```
 
-### Contenido de archivos clave
-
-**`ansible.cfg`**
-```ini
-[defaults]
-roles_path = roles
-```
-
-**`collections/requirements.yml`**
-```yaml
 ---
-collections:
-  - name: community.general
-    version: ">=7.0.0"
-  - name: community.windows
-    version: ">=1.11.0,<3.0.0"
+
+## Repositorio GitHub — Portal Self-Service
+Repo: monorepo Angular + Node.js/Express
+
+### Estructura del portal
+```text
+backend/
+  .env                               ✅ configurado en VM (NO en repo)
+  src/
+    aap.js                           ✅ launchWorkflow + launchJobTemplate con HTTPS agent
+    auth.js                          ✅ JWT middleware (signToken, verifyToken, authRequired)
+    db.js                            ✅ SQLite con tabla users (email, role, active)
+    index.js                         ✅ Express + passport.initialize()
+    routes/
+      auth.js                        ✅ Google OAuth (passport-google-oauth20) + /me
+      jobs.js                        ✅ rutas: /cis, /employees/alta, /baja, /cambio-rol, /reset
+frontend/
+  src/
+    app/
+      app.component.ts               ✅ captura token OAuth del callback en ngOnInit
+      services/
+        auth.service.ts              ✅ handleOAuthCallback + loginWithGoogle
+      pages/
+        login/login.component.ts     ✅ botón "Continuar con Google"
 ```
 
-**`inventories/hosts.yml`**
-```yaml
-all:
-  children:
-    linux_servers:
-      hosts:
-        web-server:
-          ansible_host: 10.10.0.2
-          ansible_user: ansible
-          ansible_become: true
-    windows_servers:
-      hosts:
-        windows-dc:
-          ansible_host: 10.10.0.3
-          ansible_connection: winrm
-          ansible_winrm_transport: ntlm
-          ansible_port: 5985
-          ansible_winrm_scheme: http
+### Stack del portal
+- **Frontend:** Angular (standalone components)
+- **Backend:** Node.js + Express
+- **Auth:** Google OAuth 2.0 + JWT
+- **DB local:** SQLite (better-sqlite3) — usuarios autorizados
+- **Proxy:** Caddy v2.11.2 (HTTPS automático)
+- **Proceso:** pm2 (`portal-aap`)
+
+### Variables de entorno del backend (`.env` en VM)
+```env
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_CALLBACK_URL=https://portal.datumselfservice.site/api/auth/google/callback
+JWT_SECRET=datum-aap-poc-2025
+AAP_URL=https://10.10.0.10
+AAP_TOKEN=...
+AAP_WF_CIS=14
+AAP_WF_EMP_ALTA=22
+AAP_WF_EMP_BAJA=23
+AAP_WF_EMP_CAMBIO_ROL=24
+AAP_JT_EMP_AD_RESET=21
+PORT=3000
+NODE_ENV=production
 ```
 
-**`roles/ad_users/defaults/main.yml`**
-```yaml
+### Usuarios autorizados en SQLite
+- Acceso controlado por BD local — Google solo verifica identidad
+- Para agregar usuarios: `sqlite3 portal.db "INSERT OR REPLACE INTO users (email, role, active) VALUES ('correo@dominio.com', 'ops', 1);"`
+- Roles: `ops` (técnico — acceso total) | `commercial` (no técnico — acceso limitado)
+
 ---
-ad_ou: "CN=Users,DC=datum,DC=local"
-ad_domain: "datum.local"
-employee_full_name: "Default User"
-employee_password: ""
-employee_role: "Domain Users"
-employee_action: "alta"
-```
 
-**`roles/ad_users/tasks/main.yml`**
-```yaml
----
-- name: "AD | Crear usuario en Active Directory"
-  community.windows.win_domain_user:
-    name: "{{ employee_username }}"
-    firstname: "{{ employee_full_name.split()[0] }}"
-    surname: "{{ employee_full_name.split()[1] }}"
-    password: "{{ employee_password }}"
-    state: present
-    enabled: true
-    groups:
-      - "Domain Users"
-    update_password: on_create
-  when: employee_action == "alta"
+## IDs de Workflows y Job Templates en AAP
 
-- name: "AD | Deshabilitar usuario en Active Directory"
-  community.windows.win_domain_user:
-    name: "{{ employee_username }}"
-    state: present
-    enabled: false
-  when: employee_action == "baja"
-
-- name: "AD | Reset de contraseña en Active Directory"
-  community.windows.win_domain_user:
-    name: "{{ employee_username }}"
-    password: "{{ employee_password }}"
-    state: present
-    enabled: true
-    password_expired: true
-    update_password: always
-  when: employee_action == "reset"
-```
-
-**`roles/oracle_users/defaults/main.yml`**
-```yaml
----
-oracle_home: "/opt/oracle/product/26ai/dbhomeFree"
-oracle_pdb: "FREEPDB1"
-oracle_host: "localhost"
-oracle_port: "1521"
-employee_action: "alta"
-employee_role_anterior: ""
-employee_oracle_username: ""
-```
-
-**`roles/oracle_users/tasks/main.yml`**
-```yaml
----
-- name: "Oracle | Crear usuario en FREEPDB1"
-  ansible.builtin.shell: |
-    {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
-    CREATE USER {{ employee_oracle_username }} IDENTIFIED BY "{{ employee_password }}";
-    GRANT CREATE SESSION TO {{ employee_oracle_username }};
-    EXIT;
-    EOF
-  environment:
-    ORACLE_HOME: "{{ oracle_home }}"
-    ORACLE_SID: "FREE"
-    PATH: "{{ oracle_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-  register: oracle_create_result
-  changed_when: "'User created' in oracle_create_result.stdout"
-  failed_when:
-    - oracle_create_result.rc != 0
-    - "'ORA-01920' not in oracle_create_result.stdout"
-  when: employee_action == "alta"
-
-- name: "Oracle | Asignar rol al usuario"
-  ansible.builtin.shell: |
-    {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
-    GRANT {{ employee_role }} TO {{ employee_oracle_username }};
-    EXIT;
-    EOF
-  environment:
-    ORACLE_HOME: "{{ oracle_home }}"
-    ORACLE_SID: "FREE"
-    PATH: "{{ oracle_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-  register: oracle_grant_result
-  changed_when: "'Grant succeeded' in oracle_grant_result.stdout"
-  failed_when: oracle_grant_result.rc != 0
-  when: employee_action == "alta"
-
-- name: "Oracle | Bloquear usuario (baja)"
-  ansible.builtin.shell: |
-    {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
-    ALTER USER {{ employee_oracle_username }} ACCOUNT LOCK;
-    EXIT;
-    EOF
-  environment:
-    ORACLE_HOME: "{{ oracle_home }}"
-    ORACLE_SID: "FREE"
-    PATH: "{{ oracle_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-  register: oracle_lock_result
-  changed_when: "'User altered' in oracle_lock_result.stdout"
-  failed_when: oracle_lock_result.rc != 0
-  when: employee_action == "baja"
-
-- name: "Oracle | Cambio de rol — revocar rol anterior"
-  ansible.builtin.shell: |
-    {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
-    REVOKE {{ employee_role_anterior }} FROM {{ employee_oracle_username }};
-    EXIT;
-    EOF
-  environment:
-    ORACLE_HOME: "{{ oracle_home }}"
-    ORACLE_SID: "FREE"
-    PATH: "{{ oracle_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-  register: oracle_revoke_result
-  changed_when: "'Revoke succeeded' in oracle_revoke_result.stdout"
-  failed_when:
-    - oracle_revoke_result.rc != 0
-    - "'ORA-01951' not in oracle_revoke_result.stdout"
-  when: employee_action == "cambio_rol"
-
-- name: "Oracle | Cambio de rol — asignar rol nuevo"
-  ansible.builtin.shell: |
-    {{ oracle_home }}/bin/sqlplus -S {{ oracle_admin_user }}/{{ oracle_admin_password }}@{{ oracle_host }}:{{ oracle_port }}/{{ oracle_pdb }} <<EOF
-    GRANT {{ employee_role }} TO {{ employee_oracle_username }};
-    EXIT;
-    EOF
-  environment:
-    ORACLE_HOME: "{{ oracle_home }}"
-    ORACLE_SID: "FREE"
-    PATH: "{{ oracle_home }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-  register: oracle_newrole_result
-  changed_when: "'Grant succeeded' in oracle_newrole_result.stdout"
-  failed_when: oracle_newrole_result.rc != 0
-  when: employee_action == "cambio_rol"
-```
+| Nombre | Tipo | ID |
+|--------|------|----|
+| `wf-cis-level1` | Workflow | 14 |
+| `wf-emp-alta` | Workflow | 22 |
+| `wf-emp-baja` | Workflow | 23 |
+| `wf-emp-cambio-rol` | Workflow | 24 |
+| `jt-cis-break` | Job Template | 15 |
+| `jt-cis-level1` | Job Template | 11 |
+| `jt-cis-remediation` | Job Template | 12 |
+| `jt-cis-report` | Job Template | 13 |
+| `jt-emp-ad-alta` | Job Template | 16 |
+| `jt-emp-ad-baja` | Job Template | 18 |
+| `jt-emp-ad-reset` | Job Template | 21 |
+| `jt-emp-oracle-alta` | Job Template | 17 |
+| `jt-emp-oracle-baja` | Job Template | 19 |
+| `jt-emp-oracle-cambio-rol` | Job Template | 20 |
 
 ---
 
@@ -333,43 +240,13 @@ employee_oracle_username: ""
 - `jt-emp-oracle-cambio-rol` ✅ funcional — con escalada de privilegios
 
 ### Workflows
-- `wf-cis-level1` ✅ funcional
-  - `Start → jt-cis-level1 → jt-cis-remediation → jt-cis-report`
-- `wf-emp-alta` ✅ funcional
-  - `Start → jt-emp-ad-alta (Con éxito) → jt-emp-oracle-alta`
-- `wf-emp-baja` ✅ funcional
-  - `Start → jt-emp-ad-baja (Con éxito) → jt-emp-oracle-baja`
+- `wf-cis-level1` ✅ funcional → `Start → jt-cis-level1 → jt-cis-remediation → jt-cis-report`
+- `wf-emp-alta` ✅ funcional → `Start → jt-emp-ad-alta → jt-emp-oracle-alta`
+- `wf-emp-baja` ✅ funcional → `Start → jt-emp-ad-baja → jt-emp-oracle-baja`
+- `wf-emp-cambio-rol` ✅ funcional → lanza `jt-emp-oracle-cambio-rol`
 
 ### Operaciones sin workflow (JT directo)
-- Cambio de rol Oracle → lanzar `jt-emp-oracle-cambio-rol` directamente
-- Reset contraseña AD → lanzar `jt-emp-ad-reset` directamente
-
-### Variables por operación
-```yaml
-# Alta
-employee_action: "alta"
-employee_username: "carlos.alvarenga"
-employee_full_name: "Carlos Alvarenga"
-employee_password: "Datum2025!"
-employee_role: "APP_READONLY"
-employee_oracle_username: "CARLOS_ALVARENGA"
-
-# Baja
-employee_action: "baja"
-employee_username: "carlos.alvarenga"
-employee_oracle_username: "CARLOS_ALVARENGA"
-
-# Cambio de rol Oracle
-employee_action: "cambio_rol"
-employee_oracle_username: "CARLOS_ALVARENGA"
-employee_role_anterior: "APP_READONLY"
-employee_role: "APP_OPERATOR"
-
-# Reset contraseña AD
-employee_action: "reset"
-employee_username: "carlos.alvarenga"
-employee_password: "NuevoPassword2025!"
-```
+- Reset contraseña AD → lanzar `jt-emp-ad-reset` (ID: 21) directamente
 
 ---
 
@@ -403,27 +280,37 @@ Pendiente de diseño e implementación.
 ---
 
 # PORTAL SELF-SERVICE
-## Estado: ❌ No iniciado
+## Estado: 🔄 En progreso
 
-### Requisitos definidos
-- VM Ubuntu 22.04 | `10.10.0.4` | e2-small → **no creada aún**
-- Consume API REST de AAP — no ejecuta Ansible directamente
-- Login con Google OAuth para capturar el correo del usuario
-- Correo del usuario = destinatario dinámico del reporte CIS
-- Formularios para disparar cada workflow/JT con sus variables correspondientes
-- Al lanzar desde el portal, el username de AD va en minúsculas y el de Oracle en MAYÚSCULAS con guion bajo
+### Completado ✅
+- VM Ubuntu 24.04 creada en GCP (`10.10.0.4`, e2-small)
+- IP pública estática asignada (`34.60.3.144`)
+- Dominio `datumselfservice.site` registrado en Hostinger
+- DNS configurado: `portal.datumselfservice.site → 34.60.3.144`
+- Caddy v2.11.2 instalado y configurado como reverse proxy con HTTPS automático
+- Frontend Angular compilado y servido por Express en puerto 3000
+- Backend Node.js funcional con rutas `/api/auth` y `/api/jobs`
+- Google OAuth configurado en Google Cloud Console
+- Login con Google funcional (`carlos.alvarenga@datumredsoft.com`)
+- JWT generado correctamente al autenticar
+- pm2 configurado con arranque automático (`pm2 startup` + `pm2 save`)
+- `backend/src/aap.js` actualizado con `launchWorkflow` y `launchJobTemplate`
+- `backend/src/routes/jobs.js` actualizado con todas las rutas de AAP
+- IDs de workflows y JTs mapeados en `.env`
 
-### Flujo objetivo del portal
-```
-Usuario hace login con Google
-→ Portal captura su correo
-→ Usuario selecciona operación (CIS audit, Alta empleado, Baja, etc.)
-→ Portal muestra formulario con campos necesarios
-→ Portal transforma variables (ej: carlos.alvarenga → CARLOS_ALVARENGA)
-→ Portal llama API REST de AAP con las variables
-→ AAP ejecuta el workflow/JT correspondiente
-→ Resultado visible en el portal
-```
+### Pendiente ❌
+- Hacer `git pull` + rebuild en la VM con los últimos cambios de `aap.js` y `jobs.js`
+- Construir formularios en el frontend Angular por caso de uso:
+  - CIS Level 1 (botón simple → dispara `wf-cis-level1`)
+  - Alta de empleado (formulario con campos → dispara `wf-emp-alta`)
+  - Baja de empleado (formulario → dispara `wf-emp-baja`)
+  - Cambio de rol (formulario → dispara `wf-emp-cambio-rol`)
+  - Reset de contraseña AD (formulario → dispara `jt-emp-ad-reset`)
+- Implementar transformación automática de username en el frontend:
+  - `carlos.alvarenga` → `CARLOS_ALVARENGA` (para Oracle)
+- Mostrar estado del job en el portal después de lanzarlo (job_id + estado)
+- Lógica del break playbook disparado en background al hacer login (para demo CIS)
+- Integrar correo del usuario logueado como destinatario dinámico del reporte CIS
 
 ---
 
@@ -436,6 +323,12 @@ Usuario hace login con Google
 - Proponer Oracle 19c o XE 21c
 - Proponer mover Oracle a VM separada
 - Sobrecomplicar el modelo Oracle
+
+### Portal
+- NO modificar el `.env` directamente — está en la VM, no en el repo
+- NO cambiar el puerto 3000 — Caddy apunta ahí
+- NO tocar la configuración de Caddy — ya está funcional
+- NO proponer autenticación distinta a Google OAuth — ya está implementada
 
 ### WinRM — NO volver a intentar
 - NO usar `basic` como transporte WinRM en DC
@@ -480,14 +373,17 @@ SELECT grantee, granted_role FROM dba_role_privs WHERE grantee = 'NOMBRE_USUARIO
 
 # PENDIENTES GLOBALES — EN ORDEN DE PRIORIDAD
 
-## 1. Portal Self-Service (siguiente paso)
-- ❌ Crear VM Ubuntu 22.04 en GCP (`10.10.0.4`, e2-small)
-- ❌ Definir stack tecnológico del portal (Node.js recomendado)
-- ❌ Implementar login con Google OAuth
-- ❌ Construir formularios por caso de uso (CIS, Alta, Baja, Cambio rol, Reset)
-- ❌ Integrar con API REST de AAP
-- ❌ Implementar transformación de variables (AD vs Oracle username)
-- ❌ Lógica del break playbook disparado en background al hacer login
+## 1. Portal Self-Service — Formularios frontend (siguiente paso)
+- ❌ `git pull` + rebuild frontend en la VM
+- ❌ Formulario CIS Level 1 (componente `cis.component.ts`)
+- ❌ Formulario Alta de empleado (componente `employees.component.ts`)
+- ❌ Formulario Baja de empleado
+- ❌ Formulario Cambio de rol
+- ❌ Formulario Reset de contraseña AD
+- ❌ Transformación automática AD username → Oracle username en frontend
+- ❌ Visualización del job_id y estado tras lanzar desde el portal
+- ❌ Break playbook en background al hacer login (para demo CIS)
+- ❌ Correo del usuario logueado como destinatario dinámico del reporte CIS
 
 ## 2. Automatización #3 — Entornos efímeros
 - ❌ Diseño del flujo completo
