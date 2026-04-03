@@ -37,6 +37,9 @@
         access_configs:
           - name: External NAT
             type: ONE_TO_ONE_NAT
+    tags:
+      items:
+        - allow-ssh
     labels:
       managed_by: aap
       ephemeral: "true"
@@ -45,6 +48,3 @@
     state: present
   register: gcp_create_result
 
-- name: Mostrar resultado de creacion
-  ansible.builtin.debug:
-    var: gcp_create_result
