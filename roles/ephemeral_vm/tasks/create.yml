@@ -22,7 +22,7 @@
     name: "{{ instance_name }}"
     project: "{{ gcp_project_id }}"
     zone: "{{ gcp_zone }}"
-    machine_type: "zones/{{ gcp_zone }}/machineTypes/{{ machine_type }}"
+    machine_type: "{{ machine_type }}"
     disks:
       - auto_delete: true
         boot: true
