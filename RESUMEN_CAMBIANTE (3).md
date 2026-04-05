@@ -148,22 +148,35 @@ Repo: monorepo Angular + Node.js/Express
 backend/
   .env                               ✅ configurado en VM (NO en repo)
   src/
-    aap.js                           ✅ launchWorkflow + launchJobTemplate con HTTPS agent
+    aap.js                           ✅ launchWorkflow + launchJobTemplate + consulta de estado en AAP
     auth.js                          ✅ JWT middleware (signToken, verifyToken, authRequired)
     db.js                            ✅ SQLite con tabla users (email, role, active)
     index.js                         ✅ Express + passport.initialize()
     routes/
       auth.js                        ✅ Google OAuth (passport-google-oauth20) + /me
-      jobs.js                        ✅ rutas: /cis, /employees/alta, /baja, /cambio-rol, /reset
+      jobs.js                        ✅ rutas: /cis, /employees/alta, /baja, /cambio-rol, /reset, /ephemeral/create, /ephemeral/delete, /status/:jobId
 frontend/
   src/
     app/
       app.component.ts               ✅ captura token OAuth del callback en ngOnInit
       services/
         auth.service.ts              ✅ handleOAuthCallback + loginWithGoogle
+        jobs.service.ts              ✅ payloads reales + consulta de estado de jobs
       pages/
         login/login.component.ts     ✅ botón "Continuar con Google"
+        cis/cis.component.ts         ✅ lanza workflow CIS y muestra estado del job
+        employees/employees.component.ts ✅ selector de operación + formularios por alta/baja/cambio/reset + estado del job
+        ephemeral/ephemeral.component.ts ✅ formulario real para crear/eliminar VM + estado del job
 ```
+
+### Estado actual del portal web
+- Login con Google ✅
+- Autorización local con SQLite ✅
+- Gestión de empleados (alta, baja, cambio de rol, reset) desde el portal hacia AAP ✅
+- Estandarización CIS desde el portal hacia workflow de AAP ✅
+- Creación y eliminación de VM efímera desde el portal hacia Job Templates de AAP ✅
+- Seguimiento de estado de jobs desde AAP (`pending`, `running`, `successful`, `failed`) ✅
+- UI mejorada en módulos de empleados, CIS y entornos bajo demanda ✅
 
 ### Stack del portal
 - **Frontend:** Angular (standalone components)
@@ -186,6 +199,8 @@ AAP_WF_EMP_ALTA=22
 AAP_WF_EMP_BAJA=23
 AAP_WF_EMP_CAMBIO_ROL=24
 AAP_JT_EMP_AD_RESET=21
+AAP_JT_EPHEMERAL_VM_CREATE=...
+AAP_JT_EPHEMERAL_VM_DELETE=...
 PORT=3000
 NODE_ENV=production
 ```
@@ -215,6 +230,8 @@ NODE_ENV=production
 | `jt-emp-oracle-alta` | Job Template | 17 |
 | `jt-emp-oracle-baja` | Job Template | 19 |
 | `jt-emp-oracle-cambio-rol` | Job Template | 20 |
+| `jt-ephemeral-vm-create` | Job Template | pendiente de documentar |
+| `jt-ephemeral-vm-delete` | Job Template | pendiente de documentar |
 
 ---
 
@@ -247,6 +264,13 @@ NODE_ENV=production
 
 ### Operaciones sin workflow (JT directo)
 - Reset contraseña AD → lanzar `jt-emp-ad-reset` (ID: 21) directamente
+- VM efímera create → lanzar `jt-ephemeral-vm-create` directamente
+- VM efímera delete → lanzar `jt-ephemeral-vm-delete` directamente
+
+### Integración nueva validada en portal
+- El portal ya envía formularios reales a AAP para empleados, CIS y VM efímera ✅
+- El backend ya distingue Workflow Jobs (`/workflow_jobs/:id`) y Jobs normales (`/jobs/:id`) para leer estado ✅
+- El frontend ya hace polling del estado del job y muestra avance visible al usuario ✅
 
 ---
 
@@ -390,3 +414,14 @@ SELECT grantee, granted_role FROM dba_role_privs WHERE grantee = 'NOMBRE_USUARIO
 - ❌ Playbooks de aprovisionamiento en GCE
 - ❌ Playbooks de destrucción automática
 - ❌ Integración con portal
+
+
+---
+
+## Mejoras pendientes de UI
+- Agregar historial visible de ejecuciones en dashboard
+- Mostrar último `job_id`, estado final y hora de ejecución por módulo
+- Traducir mejor mensajes de error técnicos de AAP/GCP a mensajes de negocio
+- Mostrar enlace rápido al job en AAP cuando se lance una automatización
+- Evaluar visibilidad condicional por rol (`ops` vs `commercial`)
+- Unificar estilos visuales de tarjetas, botones y mensajes en todo el portal

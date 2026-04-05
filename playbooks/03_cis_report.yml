@@ -34,7 +34,7 @@
         port: "{{ smtp_port }}"
         username: "{{ smtp_user }}"
         password: "{{ smtp_password }}"
-        to: "{{ report_recipient }}"
+        to: "{{ report_recipient | default(default_report_recipient) }}"
         subject: "Reporte CIS Level 1 - {{ inventory_hostname }} - {{ ansible_date_time.date }}"
         subtype: html
         body: "{{ report_content.content | b64decode }}"
